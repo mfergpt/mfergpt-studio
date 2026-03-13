@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   // { path: '/scenes', label: '3D Scenes', icon: '🎬', free: false },
   // { path: '/swap', label: 'Swap', icon: '💱' },
   { path: '/avatars', label: '3D Avatars', icon: '🧊' },
+  { path: '/token', label: '$MFERGPT', icon: '💎' },
 ]
 
 export default function Layout() {

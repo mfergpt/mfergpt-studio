@@ -14,6 +14,7 @@ import CustomTheme from './pages/CustomTheme'
 import Scenes from './pages/Scenes'
 import Swap from './pages/Swap'
 import Avatars from './pages/Avatars'
+import Token from './pages/Token'
 
 const queryClient = new QueryClient()
 
@@ -36,6 +37,7 @@ function App() {
                 <Route path="/render" element={<ThemeRender />} />
                 <Route path="/identify" element={<Identify />} />
                 <Route path="/avatars" element={<Avatars />} />
+                <Route path="/token" element={<Token />} />
                 {/* Hidden until token-gated features ready:
                 <Route path="/mferfy" element={<Mferfy />} />
                 <Route path="/custom" element={<CustomTheme />} />
