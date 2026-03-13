@@ -35,11 +35,13 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/render" element={<ThemeRender />} />
                 <Route path="/identify" element={<Identify />} />
+                <Route path="/avatars" element={<Avatars />} />
+                {/* Hidden until token-gated features ready:
                 <Route path="/mferfy" element={<Mferfy />} />
                 <Route path="/custom" element={<CustomTheme />} />
                 <Route path="/scenes" element={<Scenes />} />
                 <Route path="/swap" element={<Swap />} />
-                <Route path="/avatars" element={<Avatars />} />
+                */}
               </Route>
             </Routes>
           </BrowserRouter>

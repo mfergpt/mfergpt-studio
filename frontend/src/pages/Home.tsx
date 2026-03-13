@@ -6,10 +6,11 @@ import { MFER_CLEAR_URL } from '../lib/wagmi'
 const FEATURES = [
   { path: '/render', icon: '🎨', title: 'Theme Render', desc: '48 built-in themes. Pick a mfer, pick a style, get art.', free: true },
   { path: '/identify', icon: '🔍', title: 'Trait Identifier', desc: 'Upload any mfer image. We identify every trait.', free: true },
-  { path: '/mferfy', icon: '🎧', title: 'Mferfy', desc: 'Turn any image into a mfer. Headphones + cigarette.', free: false },
-  { path: '/custom', icon: '✨', title: 'Custom Theme', desc: 'Describe any style. AI renders it.', free: false },
-  { path: '/scenes', icon: '🎬', title: '3D Scenes', desc: 'Generate animated 3D scenes with real mfer models.', free: false },
   { path: '/avatars', icon: '🧊', title: '3D Avatars', desc: 'Create your own 3D mfer avatar.', free: true },
+  // Hidden until token-gated features ready:
+  // { path: '/mferfy', icon: '🎧', title: 'Mferfy', desc: 'Turn any image into a mfer. Headphones + cigarette.', free: false },
+  // { path: '/custom', icon: '✨', title: 'Custom Theme', desc: 'Describe any style. AI renders it.', free: false },
+  // { path: '/scenes', icon: '🎬', title: '3D Scenes', desc: 'Generate animated 3D scenes with real mfer models.', free: false },
 ]
 
 export default function Home() {
@@ -32,23 +33,8 @@ export default function Home() {
             create mfer content. no rules.
           </p>
           <p className="text-gray-500 mb-6">
-            48 themes · trait identification · mferfy · custom AI renders · 3D animated scenes
+            48 themes · trait identification · 3D avatars · more coming soon
           </p>
-          {isConnected ? (
-            <div className="text-sm">
-              {hasAccess ? (
-                <span className="text-[#00ff41]">✓ all features unlocked · ${balanceUsd.toFixed(2)} MFERGPT</span>
-              ) : (
-                <span className="text-yellow-400">
-                  ${balanceUsd.toFixed(2)} MFERGPT · <Link to="/swap" className="underline">get $5 to unlock premium</Link>
-                </span>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">
-              free features available without wallet · connect + hold $5 MFERGPT for premium
-            </p>
-          )}
         </div>
         <div className="relative">
           <img
@@ -86,7 +72,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Token Info */}
+      {/* Token Info — hidden until token-gated features ready
       <div className="mt-16 bg-[#111] border border-[#222] rounded-xl p-6 md:p-8">
         <h2 className="sartoshi-font text-2xl text-[#00ff41] mb-4">$MFERGPT</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -108,6 +94,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      */}
     </div>
   )
 }

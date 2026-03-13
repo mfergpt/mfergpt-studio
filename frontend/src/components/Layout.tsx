@@ -6,10 +6,10 @@ const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: '⌂' },
   { path: '/render', label: 'Theme Render', icon: '🎨', free: true },
   { path: '/identify', label: 'Identify', icon: '🔍', free: true },
-  { path: '/mferfy', label: 'Mferfy', icon: '🎧', free: false },
-  { path: '/custom', label: 'Custom Theme', icon: '✨', free: false },
-  { path: '/scenes', label: '3D Scenes', icon: '🎬', free: false },
-  { path: '/swap', label: 'Swap', icon: '💱' },
+  // { path: '/mferfy', label: 'Mferfy', icon: '🎧', free: false },
+  // { path: '/custom', label: 'Custom Theme', icon: '✨', free: false },
+  // { path: '/scenes', label: '3D Scenes', icon: '🎬', free: false },
+  // { path: '/swap', label: 'Swap', icon: '💱' },
   { path: '/avatars', label: '3D Avatars', icon: '🧊' },
 ]
 
@@ -46,6 +46,7 @@ export default function Layout() {
           })}
         </div>
 
+        {/* Wallet connect — hidden until token-gated features are ready
         <div className="hidden md:block p-4 border-t border-[#222]">
           <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />
           {isConnected && (
@@ -59,12 +60,14 @@ export default function Layout() {
             </div>
           )}
         </div>
+        */}
       </nav>
 
-      {/* Mobile wallet button */}
+      {/* Mobile wallet button — hidden until token-gated features are ready
       <div className="md:hidden p-3 bg-[#111] border-b border-[#222] flex justify-end">
         <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />
       </div>
+      */}
 
       {/* Main content */}
       <main className="flex-1 p-4 md:p-8 max-w-6xl">
