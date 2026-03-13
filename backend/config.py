@@ -13,7 +13,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Allowed theme names — WHITELIST only, no arbitrary input to CLI
 ALLOWED_THEMES = frozenset([
-    'acid','ascii_art','banksy','candy','chalk','chrome','circuit','clay',
+    'acid','ascii','banksy','candy','chalk','chrome','circuit','clay',
     'collage','comic','cross_stitch','cyberpunk','diamond','duotone','ember',
     'frost','glitch','gold','graffiti','hand_drawn','hologram','infrared',
     'jungle','lego','matrix_rain','mosaic','negative','neon','newspaper',

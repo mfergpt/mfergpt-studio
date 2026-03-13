@@ -18,7 +18,7 @@ export const MAX_MFER_ID = 10020
 export const API_URL = import.meta.env.VITE_API_URL || ''
 
 export const THEMES = [
-  'acid','ascii_art','banksy','candy','chalk','chrome','circuit','clay',
+  'acid','ascii','banksy','candy','chalk','chrome','circuit','clay',
   'collage','comic','cross_stitch','cyberpunk','diamond','duotone','ember',
   'frost','glitch','gold','graffiti','hand_drawn','hologram','infrared',
   'jungle','lego','matrix_rain','mosaic','negative','neon','newspaper',

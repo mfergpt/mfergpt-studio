@@ -1,15 +1,10 @@
 import { useState, useRef } from 'react'
 import { api } from '../lib/api'
 
-interface TraitResult {
-  traits: Record<string, string>
-  closestMatch?: { id: number; score: number }
-}
-
 export default function Identify() {
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
-  const [result, setResult] = useState<TraitResult | null>(null)
+  const [result, setResult] = useState<Record<string, [string, number][]> | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -82,21 +77,21 @@ export default function Identify() {
           {result && (
             <div className="bg-[#111] border border-[#222] rounded-xl p-6">
               <h3 className="sartoshi-font text-xl text-[#00ff41] mb-4">traits detected</h3>
-              <div className="space-y-2">
-                {Object.entries(result.traits).map(([key, value]) => (
-                  <div key={key} className="flex justify-between border-b border-[#222] pb-2">
-                    <span className="text-gray-400 text-sm">{key}</span>
-                    <span className="text-white text-sm">{value}</span>
+              <div className="space-y-3">
+                {Object.entries(result).map(([trait, matches]) => (
+                  <div key={trait} className="border-b border-[#222] pb-3">
+                    <div className="text-sm text-gray-400 mb-1">{trait}</div>
+                    {Array.isArray(matches) ? matches.map(([value, confidence], i) => (
+                      <div key={i} className="flex justify-between items-center">
+                        <span className="text-white text-sm">{value}</span>
+                        <span className="text-xs text-gray-500">{(confidence * 100).toFixed(1)}%</span>
+                      </div>
+                    )) : (
+                      <span className="text-white text-sm">{String(matches)}</span>
+                    )}
                   </div>
                 ))}
               </div>
-              {result.closestMatch && (
-                <div className="mt-6 p-4 bg-[#0a0a0a] rounded-lg">
-                  <p className="text-sm text-gray-400">closest match</p>
-                  <p className="text-xl text-[#00ff41] sartoshi-font">mfer #{result.closestMatch.id}</p>
-                  <p className="text-xs text-gray-500">{(result.closestMatch.score * 100).toFixed(1)}% match</p>
-                </div>
-              )}
             </div>
           )}
         </div>
