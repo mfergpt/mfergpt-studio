@@ -14,7 +14,7 @@ class StudioAPI {
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`
     }
-    const res = await fetch(`${API_URL}${path}`, { ...options, headers })
+    const res = await fetch(`${API_URL}/api${path}`, { ...options, headers })
     if (!res.ok) throw new Error(`API error: ${res.status}`)
     return res
   }

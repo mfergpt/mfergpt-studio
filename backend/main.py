@@ -14,8 +14,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
+from fastapi.staticfiles import StaticFiles
 from config import ALLOWED_ORIGINS, RATE_LIMIT_FREE
 from routes import auth, render, identify, mferfy, scene
+
+FRONTEND_DIR = Path("/Users/mfergpt/dev/mfergpt-studio/frontend/dist")
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT_FREE])
@@ -51,21 +54,22 @@ async def security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     # No server version leaking
-    response.headers.pop("server", None)
+    if "server" in response.headers:
+        del response.headers["server"]
     return response
 
-# Routes
-app.include_router(auth.router)
-app.include_router(render.router)
-app.include_router(identify.router)
-app.include_router(mferfy.router)
-app.include_router(scene.router)
+# Routes — all under /api to avoid SPA conflicts
+app.include_router(auth.router, prefix="/api")
+app.include_router(render.router, prefix="/api")
+app.include_router(identify.router, prefix="/api")
+app.include_router(mferfy.router, prefix="/api")
+app.include_router(scene.router, prefix="/api")
 
-@app.get("/health")
+@app.get("/api/health")
 async def health():
     return {"status": "ok", "service": "mfergpt-studio"}
 
-@app.get("/mfer/{mfer_id}")
+@app.get("/api/mfer/{mfer_id}")
 async def get_mfer(mfer_id: int):
     from security import validate_mfer_id
     mid = validate_mfer_id(mfer_id)
@@ -74,6 +78,22 @@ async def get_mfer(mfer_id: int):
         "headUrl": f"https://heads.mfers.dev/{mid}.png",
         "clearUrl": f"https://clear.mfers.dev/{mid}.png",
     }
+
+# Serve frontend static files (SPA fallback)
+if FRONTEND_DIR.exists():
+    # Mount static assets
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+    # Serve fonts
+    if (FRONTEND_DIR / "fonts").exists():
+        app.mount("/fonts", StaticFiles(directory=FRONTEND_DIR / "fonts"), name="fonts")
+
+    # SPA fallback — serve index.html for all non-API routes
+    from fastapi.responses import HTMLResponse
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        index = FRONTEND_DIR / "index.html"
+        return HTMLResponse(content=index.read_text())
 
 if __name__ == "__main__":
     import uvicorn

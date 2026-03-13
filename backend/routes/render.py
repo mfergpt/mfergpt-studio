@@ -1,5 +1,6 @@
 """Render routes — theme renders (free) and custom renders (gated)."""
 import asyncio
+import glob
 import uuid
 from pathlib import Path
 from fastapi import APIRouter, Depends
@@ -24,6 +25,27 @@ class CustomRenderRequest(BaseModel):
 async def list_themes():
     return [{"name": t} for t in sorted(ALLOWED_THEMES)]
 
+def _find_output(base_path: Path) -> Path | None:
+    """Find the actual output file — mfer_gen may change the extension (gif vs png vs mp4)."""
+    stem = base_path.stem
+    parent = base_path.parent
+    for ext in ['.gif', '.png', '.mp4', '.jpg', '.webp']:
+        candidate = parent / f"{stem}{ext}"
+        if candidate.exists():
+            return candidate
+    # Also check if the script wrote to stdout with "Done: /path"
+    return None
+
+def _media_type(path: Path) -> str:
+    ext = path.suffix.lower()
+    return {
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.jpg': 'image/jpeg',
+        '.mp4': 'video/mp4',
+        '.webp': 'image/webp',
+    }.get(ext, 'application/octet-stream')
+
 @router.post("/render")
 async def render(req: RenderRequest):
     """Free theme render — whitelisted themes only, no user input in shell."""
@@ -31,15 +53,15 @@ async def render(req: RenderRequest):
     theme = validate_theme(req.theme)
 
     job_id = uuid.uuid4().hex[:12]
-    ext = "mp4" if req.animated else "png"
-    output = OUTPUT_DIR / f"render-{job_id}.{ext}"
+    output_base = OUTPUT_DIR / f"render-{job_id}"
+    output_requested = output_base.with_suffix(".png")
 
     # Build command as ARRAY — never shell=True, never string interpolation
     cmd = [
         "python3", "-m", "mfer_gen",
         "--id", str(mfer_id),
         "--theme", theme,
-        "-o", str(output),
+        "-o", str(output_requested),
     ]
     if req.animated:
         cmd.append("--animated")
@@ -52,14 +74,29 @@ async def render(req: RenderRequest):
     )
     stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=120)
 
-    if proc.returncode != 0 or not output.exists():
-        return {"error": "render failed", "detail": stderr.decode()[-500:]}
+    # Find actual output — script may have used different extension
+    output = _find_output(output_base)
+
+    # Also check stdout for "Done: /path" line
+    if not output:
+        for line in stdout.decode().split('\n'):
+            if line.strip().startswith('Done:'):
+                done_path = Path(line.strip().split('Done:', 1)[1].strip())
+                if done_path.exists():
+                    # Copy to our output dir for security
+                    import shutil
+                    safe_output = OUTPUT_DIR / f"render-{job_id}{done_path.suffix}"
+                    shutil.copy2(done_path, safe_output)
+                    output = safe_output
+                    break
+
+    if proc.returncode != 0 or not output:
+        return {"error": "render failed", "detail": stderr.decode()[-500:] + " | " + stdout.decode()[-500:]}
 
     # Watermark
     await _watermark(output)
 
-    media_type = "video/mp4" if req.animated else "image/png"
-    return FileResponse(output, media_type=media_type, filename=f"mfer-{mfer_id}-{theme}.{ext}")
+    return FileResponse(output, media_type=_media_type(output), filename=f"mfer-{mfer_id}-{theme}{output.suffix}")
 
 @router.post("/render-custom")
 async def render_custom(req: CustomRenderRequest, user: dict = Depends(require_token_gate)):
@@ -68,15 +105,15 @@ async def render_custom(req: CustomRenderRequest, user: dict = Depends(require_t
     prompt = validate_prompt(req.prompt)
 
     job_id = uuid.uuid4().hex[:12]
-    ext = "mp4" if req.animated else "png"
-    output = OUTPUT_DIR / f"custom-{job_id}.{ext}"
+    output_base = OUTPUT_DIR / f"custom-{job_id}"
+    output_requested = output_base.with_suffix(".png")
 
     cmd = [
         "python3", "-m", "mfer_gen",
         "--id", str(mfer_id),
         "--theme", "custom",
         "--custom-prompt", prompt,
-        "-o", str(output),
+        "-o", str(output_requested),
     ]
     if req.animated:
         cmd.append("--animated")
@@ -89,13 +126,24 @@ async def render_custom(req: CustomRenderRequest, user: dict = Depends(require_t
     )
     stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=180)
 
-    if proc.returncode != 0 or not output.exists():
+    output = _find_output(output_base)
+    if not output:
+        for line in stdout.decode().split('\n'):
+            if line.strip().startswith('Done:'):
+                done_path = Path(line.strip().split('Done:', 1)[1].strip())
+                if done_path.exists():
+                    import shutil
+                    safe_output = OUTPUT_DIR / f"custom-{job_id}{done_path.suffix}"
+                    shutil.copy2(done_path, safe_output)
+                    output = safe_output
+                    break
+
+    if proc.returncode != 0 or not output:
         return {"error": "render failed", "detail": stderr.decode()[-500:]}
 
     await _watermark(output)
 
-    media_type = "video/mp4" if req.animated else "image/png"
-    return FileResponse(output, media_type=media_type, filename=f"mfer-{mfer_id}-custom.{ext}")
+    return FileResponse(output, media_type=_media_type(output), filename=f"mfer-{mfer_id}-custom{output.suffix}")
 
 async def _watermark(filepath: Path):
     """Run watermark script — no user input involved."""
