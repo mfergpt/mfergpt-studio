@@ -1,5 +1,5 @@
 const CLANKER_URL = 'https://clanker.world/clanker/0x4160efdd66521483c22cb98b57b87d1fdafeab07'
-const DEXSCREENER_URL = 'https://dexscreener.com/base/0x4160efdd66521483c22cb98b57b87d1fdafeab07'
+const DEXSCREENER_URL = 'https://dexscreener.com/base/0x23ce6e13e06fc19bb5b5948334019fc75b7d0773eddf21a72008ac0ab8753d61'
 const UNISWAP_URL = 'https://app.uniswap.org/swap?chain=base&outputCurrency=0x4160efdd66521483c22cb98b57b87d1fdafeab07'
 const CA = '0x4160efdd66521483c22cb98b57b87d1fdafeab07'
 
@@ -58,7 +58,7 @@ export default function Token() {
       {/* DexScreener embed */}
       <div className="bg-[#111] border border-[#222] rounded-xl overflow-hidden">
         <iframe
-          src={`https://dexscreener.com/base/${CA}?embed=1&theme=dark`}
+          src="https://dexscreener.com/base/0x23ce6e13e06fc19bb5b5948334019fc75b7d0773eddf21a72008ac0ab8753d61?embed=1&theme=dark"
           title="DexScreener Chart"
           className="w-full border-0"
           style={{ height: '500px' }}
