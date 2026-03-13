@@ -79,21 +79,44 @@ async def get_mfer(mfer_id: int):
         "clearUrl": f"https://clear.mfers.dev/{mid}.png",
     }
 
-# Serve frontend static files (SPA fallback)
+# Serve frontend — must be LAST (catch-all)
 if FRONTEND_DIR.exists():
-    # Mount static assets
-    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
-    # Serve fonts
-    if (FRONTEND_DIR / "fonts").exists():
-        app.mount("/fonts", StaticFiles(directory=FRONTEND_DIR / "fonts"), name="fonts")
-
-    # SPA fallback — serve index.html for all non-API routes
-    from fastapi.responses import HTMLResponse
+    from fastapi.responses import HTMLResponse, Response
 
     @app.get("/{full_path:path}")
-    async def spa_fallback(full_path: str):
-        index = FRONTEND_DIR / "index.html"
-        return HTMLResponse(content=index.read_text())
+    async def serve_frontend(full_path: str):
+        # Try to serve static file first
+        file_path = FRONTEND_DIR / full_path
+        # Security: ensure resolved path is within FRONTEND_DIR
+        try:
+            file_path = file_path.resolve()
+            if not str(file_path).startswith(str(FRONTEND_DIR.resolve())):
+                return HTMLResponse(content=(FRONTEND_DIR / "index.html").read_text())
+        except Exception:
+            return HTMLResponse(content=(FRONTEND_DIR / "index.html").read_text())
+
+        if file_path.is_file():
+            ext = file_path.suffix.lower()
+            content_types = {
+                '.js': 'application/javascript',
+                '.css': 'text/css',
+                '.html': 'text/html',
+                '.png': 'image/png',
+                '.jpg': 'image/jpeg',
+                '.gif': 'image/gif',
+                '.svg': 'image/svg+xml',
+                '.ico': 'image/x-icon',
+                '.woff': 'font/woff',
+                '.woff2': 'font/woff2',
+                '.otf': 'font/otf',
+                '.ttf': 'font/ttf',
+                '.json': 'application/json',
+            }
+            ct = content_types.get(ext, 'application/octet-stream')
+            return Response(content=file_path.read_bytes(), media_type=ct)
+
+        # SPA fallback — serve index.html for client-side routing
+        return HTMLResponse(content=(FRONTEND_DIR / "index.html").read_text())
 
 if __name__ == "__main__":
     import uvicorn
