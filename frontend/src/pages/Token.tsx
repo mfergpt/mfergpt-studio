@@ -22,7 +22,7 @@ export default function Token() {
           </div>
           <div className="flex justify-between text-sm border-b border-[#222] pb-3">
             <span className="text-gray-400">launched via</span>
-            <span className="text-white">clanker</span>
+            <span className="text-white">bankr</span>
           </div>
         </div>
       </div>
