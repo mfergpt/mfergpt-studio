@@ -16,7 +16,7 @@ from slowapi.errors import RateLimitExceeded
 
 from fastapi.staticfiles import StaticFiles
 from config import ALLOWED_ORIGINS, RATE_LIMIT_FREE
-from routes import auth, render, identify, mferfy, scene
+from routes import auth, render, identify, mferfy, scene, gmgn
 
 FRONTEND_DIR = Path("/Users/mfergpt/dev/mfergpt-studio/frontend/dist")
 
@@ -64,6 +64,7 @@ app.include_router(render.router, prefix="/api")
 app.include_router(identify.router, prefix="/api")
 app.include_router(mferfy.router, prefix="/api")
 app.include_router(scene.router, prefix="/api")
+app.include_router(gmgn.router, prefix="/api")
 
 @app.get("/api/health")
 async def health():

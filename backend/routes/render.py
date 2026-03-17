@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
-from security import validate_mfer_id, validate_theme, validate_prompt, require_token_gate
+from security import validate_mfer_id, validate_theme, validate_prompt, validate_collection, require_token_gate
 from config import SCRIPTS_DIR, OUTPUT_DIR, ALLOWED_THEMES
 
 router = APIRouter(tags=["render"])
@@ -15,6 +15,7 @@ class RenderRequest(BaseModel):
     mferId: int
     theme: str
     animated: bool = False
+    collection: str | None = None
 
 class CustomRenderRequest(BaseModel):
     mferId: int
@@ -56,6 +57,11 @@ async def render(req: RenderRequest):
     output_base = OUTPUT_DIR / f"render-{job_id}"
     output_requested = output_base.with_suffix(".png")
 
+    # Validate collection if provided
+    collection = None
+    if req.collection:
+        collection = validate_collection(req.collection)
+
     # Build command as ARRAY — never shell=True, never string interpolation
     cmd = [
         "python3", "-m", "mfer_gen",
@@ -63,6 +69,8 @@ async def render(req: RenderRequest):
         "--theme", theme,
         "-o", str(output_requested),
     ]
+    if collection:
+        cmd.extend(["--collection", collection])
     if req.animated:
         cmd.append("--animated")
 

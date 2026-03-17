@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { THEMES, MAX_MFER_ID } from '../lib/wagmi'
+import { THEMES, MAX_MFER_ID, COLLECTIONS } from '../lib/wagmi'
 import { api } from '../lib/api'
 import MferPreview, { RandomMferButton } from '../components/MferPreview'
 
@@ -16,6 +16,7 @@ const THEME_COLORS: Record<string, string> = {
 export default function ThemeRender() {
   const [mferId, setMferId] = useState(4566)
   const [selectedTheme, setSelectedTheme] = useState<string>('acid')
+  const [collection, setCollection] = useState<string>('og')
   const [animated, setAnimated] = useState(false)
   const [rendering, setRendering] = useState(false)
   const [result, setResult] = useState<string | null>(null)
@@ -26,7 +27,7 @@ export default function ThemeRender() {
     setError(null)
     setResult(null)
     try {
-      const blob = await api.render(mferId, selectedTheme, animated)
+      const blob = await api.render(mferId, selectedTheme, animated, collection)
       setResult(URL.createObjectURL(blob))
     } catch (e: any) {
       setError(e.message || 'render failed — is the backend running?')
@@ -87,6 +88,27 @@ export default function ThemeRender() {
 
         {/* Theme Grid */}
         <div className="flex-1">
+          {/* Collection selector */}
+          <div className="mb-6">
+            <label className="text-sm text-gray-400 mb-1 block">collection</label>
+            <p className="text-xs text-gray-600 mb-2">render any mfer in derivative styles</p>
+            <div className="flex flex-wrap gap-2">
+              {COLLECTIONS.map(c => (
+                <button
+                  key={c}
+                  onClick={() => setCollection(c)}
+                  className={`px-3 py-1.5 rounded text-xs transition-all border
+                    ${collection === c
+                      ? 'border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41]'
+                      : 'border-[#222] bg-[#111] text-gray-400 hover:border-[#444] hover:text-white'
+                    }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="text-sm text-gray-400 mb-3 block">select theme ({THEMES.length})</label>
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
             {THEMES.map(theme => (

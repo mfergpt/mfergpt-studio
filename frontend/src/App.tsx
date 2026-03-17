@@ -9,12 +9,13 @@ import Layout from './components/Layout'
 import Home from './pages/Home'
 import ThemeRender from './pages/ThemeRender'
 import Identify from './pages/Identify'
-import Mferfy from './pages/Mferfy'
-import CustomTheme from './pages/CustomTheme'
-import Scenes from './pages/Scenes'
-import Swap from './pages/Swap'
+// import Mferfy from './pages/Mferfy'
+// import CustomTheme from './pages/CustomTheme'
+// import Scenes from './pages/Scenes'
+// import Swap from './pages/Swap'
 import Avatars from './pages/Avatars'
 import Token from './pages/Token'
+import GmGn from './pages/GmGn'
 
 const queryClient = new QueryClient()
 
@@ -38,6 +39,7 @@ function App() {
                 <Route path="/identify" element={<Identify />} />
                 <Route path="/avatars" element={<Avatars />} />
                 <Route path="/token" element={<Token />} />
+                <Route path="/gmgn" element={<GmGn />} />
                 {/* Hidden until token-gated features ready:
                 <Route path="/mferfy" element={<Mferfy />} />
                 <Route path="/custom" element={<CustomTheme />} />

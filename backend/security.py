@@ -12,6 +12,7 @@ from config import (
     JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRY_HOURS,
     NONCE_EXPIRY_SECONDS, MFERGPT_TOKEN, TOKEN_GATE_USD, BASE_RPC,
     MAX_MFER_ID, MAX_PROMPT_LENGTH, ALLOWED_THEMES, ALLOWED_WORLDS, MAX_SCENE_MFERS,
+    ALLOWED_COLLECTIONS,
 )
 
 # --- Nonce store (in-memory, short-lived) ---
@@ -156,6 +157,13 @@ def validate_mfer_ids(ids: list[int]) -> list[int]:
     if len(ids) > MAX_SCENE_MFERS:
         raise HTTPException(status_code=400, detail=f"max {MAX_SCENE_MFERS} mfers per scene")
     return [validate_mfer_id(i) for i in ids]
+
+def validate_collection(collection: str) -> str:
+    """Validate derivative collection name against whitelist."""
+    collection = collection.strip().lower()
+    if collection not in ALLOWED_COLLECTIONS:
+        raise HTTPException(status_code=400, detail=f"unknown collection: {collection}")
+    return collection
 
 def validate_username(username: str) -> str:
     """Twitter username — alphanumeric + underscore only."""

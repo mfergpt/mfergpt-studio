@@ -1,6 +1,6 @@
 import { Link, Outlet, useLocation } from 'react-router-dom'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { useTokenGate } from '../hooks/useTokenGate'
+// import { ConnectButton } from '@rainbow-me/rainbowkit'
+// import { useTokenGate } from '../hooks/useTokenGate'
 
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: '⌂' },
@@ -10,13 +10,14 @@ const NAV_ITEMS = [
   // { path: '/custom', label: 'Custom Theme', icon: '✨', free: false },
   // { path: '/scenes', label: '3D Scenes', icon: '🎬', free: false },
   // { path: '/swap', label: 'Swap', icon: '💱' },
+  { path: '/gmgn', label: 'GM/GN', icon: '☀️', free: true },
   { path: '/avatars', label: '3D Avatars', icon: '🧊' },
   { path: '/token', label: '$MFERGPT', icon: '💎' },
 ]
 
 export default function Layout() {
   const location = useLocation()
-  const { hasAccess, isConnected, balanceUsd } = useTokenGate()
+  // const { hasAccess, isConnected, balanceUsd } = useTokenGate()
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">

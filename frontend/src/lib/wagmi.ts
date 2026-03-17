@@ -28,3 +28,10 @@ export const THEMES = [
 ] as const
 
 export type Theme = typeof THEMES[number]
+
+export const COLLECTIONS = [
+  'og', 'creyzies', 'eos', 'fineart', 'mfersahead',
+  'mfersbehind', 'sketchy', 'extended', 'mpher'
+] as const
+
+export type Collection = typeof COLLECTIONS[number]

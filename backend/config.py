@@ -57,3 +57,9 @@ ALLOWED_ORIGINS = [
 
 # OpenAI (for mferfy + custom themes)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+
+# Allowed derivative collections for mfer_gen
+ALLOWED_COLLECTIONS = frozenset([
+    'creyzies', 'eos', 'fineart', 'mfersahead', 'mfersbehind',
+    'sketchy', 'extended', 'mpher'
+])

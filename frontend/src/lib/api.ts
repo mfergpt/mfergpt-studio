@@ -25,11 +25,13 @@ class StudioAPI {
     return res.json()
   }
 
-  async render(mferId: number, theme: string, animated: boolean) {
+  async render(mferId: number, theme: string, animated: boolean, collection?: string) {
+    const body: Record<string, any> = { mferId, theme, animated }
+    if (collection && collection !== 'og') body.collection = collection
     const res = await this.request('/render', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mferId, theme, animated }),
+      body: JSON.stringify(body),
     })
     return res.blob()
   }
@@ -85,6 +87,15 @@ class StudioAPI {
   async getSceneStatus(jobId: string) {
     const res = await this.request(`/scene/${jobId}`)
     return res.json() as Promise<{ status: string; url?: string }>
+  }
+
+  async gmgn(mferIds: number[], mode: 'gm' | 'gn', duration: number): Promise<Blob> {
+    const res = await this.request('/gmgn', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mferIds, mode, duration }),
+    })
+    return res.blob()
   }
 
   // Auth
