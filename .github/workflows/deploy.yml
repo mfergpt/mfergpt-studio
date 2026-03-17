@@ -24,7 +24,7 @@ jobs:
       - name: Install and build
         working-directory: frontend
         run: |
-          npm ci
+          npm ci --legacy-peer-deps
           npx vite build
       - uses: actions/upload-pages-artifact@v3
         with:
