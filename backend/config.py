@@ -13,7 +13,7 @@ OUTPUT_DIR.mkdir(exist_ok=True)
 
 # Allowed theme names — WHITELIST only, no arbitrary input to CLI
 ALLOWED_THEMES = frozenset([
-    'acid','ascii','banksy','candy','chalk','chrome','circuit','clay',
+    'original','acid','ascii','banksy','candy','chalk','chrome','circuit','clay',
     'collage','comic','cross_stitch','cyberpunk','diamond','duotone','ember',
     'frost','glitch','gold','graffiti','hand_drawn','hologram','infrared',
     'jungle','lego','matrix_rain','mosaic','negative','neon','newspaper',
@@ -51,8 +51,10 @@ BASE_RPC = os.environ.get("BASE_RPC_URL", "https://mainnet.base.org")
 # CORS — LOCK to our domains only
 ALLOWED_ORIGINS = [
     "https://studio.mfergpt.lol",
+    "https://mfergpt.github.io",
     "http://localhost:5173",
     "http://localhost:5555",
+    "http://192.168.50.206:8080",
 ]
 
 # OpenAI (for mferfy + custom themes)

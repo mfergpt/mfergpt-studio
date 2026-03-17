@@ -8,7 +8,7 @@ import { config } from './lib/wagmi'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import ThemeRender from './pages/ThemeRender'
-import Identify from './pages/Identify'
+// import Identify from './pages/Identify'
 // import Mferfy from './pages/Mferfy'
 // import CustomTheme from './pages/CustomTheme'
 // import Scenes from './pages/Scenes'
@@ -36,7 +36,7 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/render" element={<ThemeRender />} />
-                <Route path="/identify" element={<Identify />} />
+                {/* <Route path="/identify" element={<Identify />} /> */}
                 <Route path="/avatars" element={<Avatars />} />
                 <Route path="/token" element={<Token />} />
                 <Route path="/gmgn" element={<GmGn />} />
