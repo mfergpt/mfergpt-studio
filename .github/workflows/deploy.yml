@@ -25,7 +25,7 @@ jobs:
         working-directory: frontend
         run: |
           npm ci --legacy-peer-deps
-          npx vite build
+          GITHUB_PAGES=1 npx vite build
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend/dist
