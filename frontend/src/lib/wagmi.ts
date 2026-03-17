@@ -15,7 +15,7 @@ export const MFER_HEADS_URL = (id: number) => `https://heads.mfers.dev/${id}.png
 export const MFER_CLEAR_URL = (id: number) => `https://clear.mfers.dev/${id}.png`
 export const MAX_MFER_ID = 10020
 
-export const API_URL = import.meta.env.VITE_API_URL || ''
+export const API_URL = import.meta.env.VITE_API_URL || 'https://studio.mfergpt.lol'
 
 export const THEMES = [
   'original',
