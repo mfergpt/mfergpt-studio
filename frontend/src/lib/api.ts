@@ -25,8 +25,9 @@ class StudioAPI {
     return res.json()
   }
 
-  async render(mferId: number, theme: string, animated: boolean, collection?: string) {
-    const body: Record<string, any> = { mferId, theme, animated }
+  async render(mferId: number, theme: string, format: 'gif' | 'png' | 'mp4' = 'gif', collection?: string) {
+    const animated = format !== 'png'
+    const body: Record<string, any> = { mferId, theme, animated, format }
     if (collection && collection !== 'og') body.collection = collection
     const res = await this.request('/render', {
       method: 'POST',

@@ -14,7 +14,8 @@ router = APIRouter(tags=["render"])
 class RenderRequest(BaseModel):
     mferId: int
     theme: str
-    animated: bool = False
+    animated: bool = True
+    format: str = "gif"  # gif (default), png, mp4
     collection: str | None = None
 
 class CustomRenderRequest(BaseModel):
@@ -71,7 +72,17 @@ async def render(req: RenderRequest):
     ]
     if collection:
         cmd.extend(["--collection", collection])
-    if req.animated:
+    
+    # Format: gif (animated, default), png (static), mp4 (animated video)
+    fmt = req.format.lower()
+    if fmt == "png":
+        cmd.append("--static")
+    elif fmt == "mp4":
+        cmd.append("--animated")
+        output_requested = output_base.with_suffix(".mp4")
+        cmd[cmd.index("-o") + 1] = str(output_requested)
+    else:
+        # gif (default) — animated
         cmd.append("--animated")
 
     proc = await asyncio.create_subprocess_exec(

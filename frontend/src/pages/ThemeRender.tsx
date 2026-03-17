@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import MferPreview, { RandomMferButton } from '../components/MferPreview'
 
 const THEME_COLORS: Record<string, string> = {
-  acid: '#39ff14', neon: '#ff00ff', gold: '#ffd700', frost: '#00bfff', ember: '#ff4500',
+  original: '#888', acid: '#39ff14', neon: '#ff00ff', gold: '#ffd700', frost: '#00bfff', ember: '#ff4500',
   cyberpunk: '#ff1493', hologram: '#7b68ee', diamond: '#b9f2ff', noir: '#555',
   sunset: '#ff6347', radioactive: '#7fff00', infrared: '#ff0000', xray: '#00ffff',
   vapor: '#ff77ff', chrome: '#c0c0c0', matrix_rain: '#00ff41', pixel: '#ff8800',
@@ -13,11 +13,13 @@ const THEME_COLORS: Record<string, string> = {
   graffiti: '#ff6600', tattoo: '#333', sketch: '#888', watercolor: '#4a90d9',
 }
 
+type OutputFormat = 'gif' | 'png' | 'mp4'
+
 export default function ThemeRender() {
   const [mferId, setMferId] = useState(4566)
   const [selectedTheme, setSelectedTheme] = useState<string>('acid')
   const [collection, setCollection] = useState<string>('og')
-  const [animated, setAnimated] = useState(false)
+  const [format, setFormat] = useState<OutputFormat>('gif')
   const [rendering, setRendering] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +29,7 @@ export default function ThemeRender() {
     setError(null)
     setResult(null)
     try {
-      const blob = await api.render(mferId, selectedTheme, animated, collection)
+      const blob = await api.render(mferId, selectedTheme, format, collection)
       setResult(URL.createObjectURL(blob))
     } catch (e: any) {
       setError(e.message || 'render failed — is the backend running?')
@@ -35,6 +37,9 @@ export default function ThemeRender() {
       setRendering(false)
     }
   }
+
+  const fileExt = format === 'gif' ? 'gif' : format === 'mp4' ? 'mp4' : 'png'
+  const isVideo = format === 'mp4'
 
   return (
     <div>
@@ -65,16 +70,25 @@ export default function ThemeRender() {
             <MferPreview id={mferId} size={160} />
           </div>
 
-          {/* Animated toggle */}
-          <label className="flex items-center gap-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={animated}
-              onChange={e => setAnimated(e.target.checked)}
-              className="accent-[#00ff41] w-4 h-4"
-            />
-            <span className="text-sm text-gray-300">animated (MP4)</span>
-          </label>
+          {/* Output format */}
+          <div>
+            <label className="text-sm text-gray-400 mb-2 block">output</label>
+            <div className="flex gap-2">
+              {([['gif', 'animated gif'], ['png', 'static png'], ['mp4', 'mp4 video']] as const).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setFormat(val)}
+                  className={`flex-1 py-2 rounded text-xs font-medium transition-all border
+                    ${format === val
+                      ? 'border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41]'
+                      : 'border-[#222] bg-[#111] text-gray-400 hover:border-[#444] hover:text-white'
+                    }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Render button */}
           <button
@@ -139,14 +153,14 @@ export default function ThemeRender() {
             <p className="text-red-400">{error}</p>
           ) : result && (
             <div className="flex flex-col items-center gap-4">
-              {animated ? (
+              {isVideo ? (
                 <video src={result} controls className="max-w-lg rounded-lg" />
               ) : (
                 <img src={result} alt="rendered mfer" className="max-w-lg rounded-lg" />
               )}
               <a
                 href={result}
-                download={`mfer-${mferId}-${selectedTheme}.${animated ? 'mp4' : 'png'}`}
+                download={`mfer-${mferId}-${selectedTheme}.${fileExt}`}
                 className="bg-[#222] hover:bg-[#333] text-white px-4 py-2 rounded text-sm transition-colors no-underline"
               >
                 ⬇ download
