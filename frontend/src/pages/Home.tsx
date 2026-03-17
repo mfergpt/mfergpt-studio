@@ -5,7 +5,7 @@ import { MFER_CLEAR_URL } from '../lib/wagmi'
 
 const FEATURES = [
   { path: '/render', icon: '🎨', title: 'Theme Render', desc: '48 built-in themes. Pick a mfer, pick a style, get art.', free: true },
-  { path: '/identify', icon: '🔍', title: 'Trait Identifier', desc: 'Upload any mfer image. We identify every trait.', free: true },
+  // { path: '/identify', icon: '🔍', title: 'Trait Identifier', desc: 'Upload any mfer image. We identify every trait.', free: true },
   { path: '/avatars', icon: '🧊', title: '3D Avatars', desc: 'Create your own 3D mfer avatar.', free: true },
   { path: '/gmgn', icon: '☀️🌙', title: 'GM/GN Videos', desc: '3D turntable videos. Say gm or gn with your mfer.', free: true },
   // Hidden until token-gated features ready:
@@ -34,7 +34,7 @@ export default function Home() {
             create mfer content. no rules.
           </p>
           <p className="text-gray-500 mb-6">
-            48 themes · trait identification · 3D avatars · more coming soon
+            48+ themes · 8 collections · gm/gn videos · 3D avatars · more coming soon
           </p>
         </div>
         <div className="relative">
