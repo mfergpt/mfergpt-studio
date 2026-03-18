@@ -19,7 +19,16 @@ ALLOWED_THEMES = frozenset([
     'jungle','lego','matrix_rain','mosaic','negative','neon','newspaper',
     'noir','oil_paint','pixel','pop','radioactive','retro_tv','risograph',
     'sketch','stained_glass','sumi_e','sunset','tattoo','thermal','traced',
-    'underwater','vapor','watercolor','woodcut','xray'
+    'underwater','vapor','watercolor','woodcut','xray',
+    'custom_infrared_thermal_heat_signature','custom_kintsugi_the_japanese_art_of_repairing_b',
+    'custom_volcanic_magma','custom_volcanic_obsidian_with_magma_cracks',
+    'custom_deep_ocean_bioluminescence','custom_deep_ocean_bioluminescence_glowing_neon',
+    'custom_starry_night_van_gogh_style_swirling_blu','custom_starry_night_with_vibrant_northern_light',
+    'custom_starry_night_theme_van_gogh_s_the_starry','custom_van_gogh_s_the_starry_night_style_pushed',
+    'custom_ancient_egyptian_hieroglyphic_gold','custom_cathedral_stained_glass_ethereal_light',
+    'custom_medieval_gothic_biblical_oil_painting_st','custom_simpsons_cartoon_style_yellow_skin_sprin',
+    'custom_taco','custom_taco_theme_warm_mexican_street_food_aest',
+    'custom_mfer_drenched_in_thick_black_crude_oil_d','custom_mfer_4448_sitting_inside_a_bod_pod_body',
 ])
 
 # Allowed scene worlds — WHITELIST

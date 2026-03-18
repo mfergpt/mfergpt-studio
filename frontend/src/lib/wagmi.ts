@@ -25,7 +25,15 @@ export const THEMES = [
   'jungle','lego','matrix_rain','mosaic','negative','neon','newspaper',
   'noir','oil_paint','pixel','pop','radioactive','retro_tv','risograph',
   'sketch','stained_glass','sumi_e','sunset','tattoo','thermal','traced',
-  'underwater','vapor','watercolor','woodcut','xray'
+  'underwater','vapor','watercolor','woodcut','xray',
+  // Custom themes (AI-generated, saved from previous renders)
+  'custom_infrared_thermal_heat_signature','custom_kintsugi_the_japanese_art_of_repairing_b',
+  'custom_volcanic_magma','custom_volcanic_obsidian_with_magma_cracks',
+  'custom_deep_ocean_bioluminescence','custom_deep_ocean_bioluminescence_glowing_neon',
+  'custom_starry_night_van_gogh_style_swirling_blu','custom_starry_night_with_vibrant_northern_light',
+  'custom_ancient_egyptian_hieroglyphic_gold','custom_cathedral_stained_glass_ethereal_light',
+  'custom_medieval_gothic_biblical_oil_painting_st','custom_simpsons_cartoon_style_yellow_skin_sprin',
+  'custom_taco','custom_mfer_drenched_in_thick_black_crude_oil_d',
 ] as const
 
 export type Theme = typeof THEMES[number]

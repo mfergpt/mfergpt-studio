@@ -12,6 +12,21 @@ const THEME_COLORS: Record<string, string> = {
   glitch: '#ff0066', comic: '#ffcc00', pop: '#ff69b4', jungle: '#228b22',
   underwater: '#006994', thermal: '#ff4444', lego: '#ff0000', candy: '#ff69b4',
   graffiti: '#ff6600', tattoo: '#333', sketch: '#888', watercolor: '#4a90d9',
+  // Custom themes
+  custom_infrared_thermal_heat_signature: '#ff2200',
+  custom_kintsugi_the_japanese_art_of_repairing_b: '#daa520',
+  custom_volcanic_magma: '#ff4400',
+  custom_volcanic_obsidian_with_magma_cracks: '#8b0000',
+  custom_deep_ocean_bioluminescence: '#00ced1',
+  custom_deep_ocean_bioluminescence_glowing_neon: '#00ffcc',
+  custom_starry_night_van_gogh_style_swirling_blu: '#1a237e',
+  custom_starry_night_with_vibrant_northern_light: '#4a148c',
+  custom_ancient_egyptian_hieroglyphic_gold: '#b8860b',
+  custom_cathedral_stained_glass_ethereal_light: '#9400d3',
+  custom_medieval_gothic_biblical_oil_painting_st: '#4a3728',
+  custom_simpsons_cartoon_style_yellow_skin_sprin: '#fdd835',
+  custom_taco: '#e65100',
+  custom_mfer_drenched_in_thick_black_crude_oil_d: '#1a1a1a',
 }
 
 type OutputFormat = 'gif' | 'png' | 'mp4'
