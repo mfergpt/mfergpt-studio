@@ -286,61 +286,114 @@ export default function MferCreator() {
     for (const { key } of CATEGORIES) {
       const files = options[key] || []
       if (files.length === 0) continue
-      if (key === 'type' || key === 'background') {
+      if (key === 'background') {
         t[key] = pick(files)
+      } else if (key === 'type') {
+        // Weighted type selection (matches avatar-maker)
+        const r = Math.random() * 100
+        const typeKeywords = r < 30 ? 'plain' : r < 60 ? 'charcoal' : r < 74 ? 'zombie' : r < 86 ? 'ape' : 'alien'
+        const matched = files.find((f: string) => f.toLowerCase().includes(typeKeywords))
+        t[key] = matched || pick(files)
+      } else if (key === 'eyes') {
+        // Exclude special eyes from random (zombie, alien — those get forced by type rules)
+        const normalEyes = files.filter((f: string) => !['zombie', 'alien'].some(s => f.toLowerCase().includes(s)))
+        t[key] = Math.random() < 0.2 ? 'none' : pick(normalEyes.length ? normalEyes : files)
       } else {
-        t[key] = Math.random() < 0.4 ? 'none' : pick(files)
+        // Optional traits: 20% chance (matches avatar-maker's 80% skip rate)
+        t[key] = Math.random() < 0.8 ? 'none' : pick(files)
       }
     }
 
-    // Conflict rules (same as original)
-    // 1. hat_over vs hat_under
+    // Conflict rules — ported from avatar-maker CharacterCreator.js
+    const lo = (s: string) => s.toLowerCase()
+
+    // Rule 1: hat_over vs hat_under conflict
     if (t.hat_over !== 'none' && t.hat_under !== 'none') {
-      const isHoodie = t.hat_over.toLowerCase().includes('hoodie')
-      const isBandana = t.hat_under.toLowerCase().includes('bandana')
-      if (!(isHoodie && isBandana)) {
-        if (Math.random() < 0.5) t.hat_over = 'none'
-        else t.hat_under = 'none'
+      const isHoodieOver = lo(t.hat_over).includes('hoodie')
+      const isBandanaUnder = lo(t.hat_under).includes('bandana')
+      const isBeanieUnder = lo(t.hat_under).includes('beanie')
+      // Hoodie + beanie = NOT OK
+      if (isHoodieOver && isBeanieUnder) {
+        t.hat_under = 'none'
+      }
+      // Hoodie + bandana = OK, everything else = conflict
+      else if (!isHoodieOver || (!isBandanaUnder && !isBeanieUnder)) {
+        Math.random() > 0.5 ? t.hat_over = 'none' : t.hat_under = 'none'
       }
     }
-    // 2. short_hair vs long_hair
+
+    // Rule 2: short_hair vs long_hair
     if (t.short_hair !== 'none' && t.long_hair !== 'none') {
-      if (Math.random() < 0.5) t.short_hair = 'none'
-      else t.long_hair = 'none'
+      Math.random() > 0.5 ? t.short_hair = 'none' : t.long_hair = 'none'
     }
-    // 3. ape: no long hair
-    if (t.type.toLowerCase().includes('ape')) t.long_hair = 'none'
-    // 4. shirt vs chain
-    if (t.shirt !== 'none' && t.chain !== 'none') {
-      if (Math.random() < 0.5) t.shirt = 'none'
-      else t.chain = 'none'
+
+    // Rule 3: ape = no long hair (ALWAYS, not just random)
+    if (lo(t.type).includes('ape')) t.long_hair = 'none'
+
+    // Rule 4: shirt/hoodie vs chain conflict
+    const hasHoodieUp = t.hat_over !== 'none' && lo(t.hat_over).includes('hoodie')
+    const hasShirt = t.shirt !== 'none'
+    const hasChain = t.chain !== 'none'
+    if ((hasShirt || hasHoodieUp) && hasChain) {
+      if (Math.random() > 0.5) {
+        t.chain = 'none'
+      } else {
+        if (hasHoodieUp) t.hat_over = 'none'
+        if (hasShirt) t.shirt = 'none'
+      }
     }
-    // 5. shirt vs hoodie up
-    if (t.shirt !== 'none' && t.hat_over !== 'none' && t.hat_over.toLowerCase().includes('hoodie')) {
-      if (Math.random() < 0.5) t.shirt = 'none'
-      else t.hat_over = 'none'
+
+    // Rule 5: shirt vs hoodie up conflict
+    if (hasShirt && hasHoodieUp) {
+      Math.random() > 0.5 ? t.hat_over = 'none' : t.shirt = 'none'
     }
-    // 6. mohawk/messy vs non-hoodie headwear
-    const hasHair = t.short_hair !== 'none'
-    const hasNonHoodieHat = (t.hat_over !== 'none' && !t.hat_over.toLowerCase().includes('hoodie')) || t.hat_under !== 'none'
-    if (hasHair && hasNonHoodieHat) {
-      if (Math.random() < 0.5) {
+
+    // Rule 6: mohawk/messy hair vs non-hoodie headwear
+    const hasMohawkOrMessy = t.short_hair !== 'none' && (lo(t.short_hair).includes('mohawk') || lo(t.short_hair).includes('messy'))
+    const hasNonHoodieHeadwear = (t.hat_over !== 'none' && !lo(t.hat_over).includes('hoodie')) || t.hat_under !== 'none'
+    if (hasMohawkOrMessy && hasNonHoodieHeadwear) {
+      if (Math.random() > 0.5) {
         t.short_hair = 'none'
       } else {
-        if (t.hat_over !== 'none' && !t.hat_over.toLowerCase().includes('hoodie')) t.hat_over = 'none'
-        if (t.hat_under !== 'none') t.hat_under = 'none'
+        if (t.hat_over !== 'none' && !lo(t.hat_over).includes('hoodie')) t.hat_over = 'none'
+        t.hat_under = 'none'
       }
     }
-    // 7. top hat/pilot/cowboy removes all hair
-    if (['top hat.png', 'pilot helmet.png', 'cowboy hat.png'].some(h => t.hat_over.toLowerCase().includes(h.replace('.png', '')))) {
+
+    // Rule 7: top hat/pilot/cowboy removes ALL hair
+    const topHeadwear = ['top hat', 'tophat', 'pilot', 'cowboy']
+    if (t.hat_over !== 'none' && topHeadwear.some(h => lo(t.hat_over).includes(h))) {
       t.short_hair = 'none'
       t.long_hair = 'none'
     }
-    // 8. hoodie up removes all hair
-    if (t.hat_over !== 'none' && t.hat_over.toLowerCase().includes('hoodie')) {
+
+    // Rule 8: hoodie up removes all hair
+    if (t.hat_over !== 'none' && lo(t.hat_over).includes('hoodie')) {
       t.short_hair = 'none'
       t.long_hair = 'none'
     }
+
+    // Rule 9: zombie type → zombie eyes (force if regular)
+    if (lo(t.type).includes('zombie')) {
+      if (t.eyes === 'none' || lo(t.eyes).includes('regular')) {
+        const zombieEyes = (options['eyes'] || []).find((e: string) => lo(e).includes('zombie'))
+        if (zombieEyes) t.eyes = zombieEyes
+      }
+    } else if (t.eyes !== 'none' && lo(t.eyes).includes('zombie')) {
+      // Non-zombie type can't have zombie eyes
+      const regularEyes = (options['eyes'] || []).find((e: string) => lo(e).includes('regular'))
+      t.eyes = regularEyes || 'none'
+    }
+
+    // Rule 10: alien type → alien eyes (if regular)
+    if (lo(t.type).includes('alien') && (t.eyes === 'none' || lo(t.eyes).includes('regular'))) {
+      const alienEyes = (options['eyes'] || []).find((e: string) => lo(e).includes('alien'))
+      if (alienEyes) t.eyes = alienEyes
+    }
+
+    // Rule 11: type-specific trait weights for random selection
+    // (plain 30%, charcoal 30%, zombie 14%, ape 12%, alien 10%, other 4%)
+    // Already handled by pick() from available options — close enough
 
     setTraits(t)
   }

@@ -191,12 +191,14 @@ def validate_traits(traits: dict[str, str]) -> dict[str, str]:
                     match = allowed_val
                     break
         if not match:
-            # Be lenient — pass through if it looks safe (alphanumeric + spaces + common chars)
+            # Be lenient — pass through if it looks safe, skip if not
             import re
             if re.match(r'^[a-zA-Z0-9 _/()$\-\.]+$', value) and len(value) < 50:
                 match = value
             else:
-                raise HTTPException(status_code=400, detail=f"invalid value for {category}: {value}")
+                # Skip unrecognized values instead of crashing
+                validated[category] = 'none'
+                continue
         validated[category] = match
     return validated
 
