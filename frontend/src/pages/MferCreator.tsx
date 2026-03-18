@@ -286,7 +286,9 @@ export default function MferCreator() {
     for (const { key } of CATEGORIES) {
       const files = options[key] || []
       if (files.length === 0) continue
-      if (key === 'background') {
+      // Mandatory traits: always picked (matches avatar-maker)
+      const MANDATORY = ['background', 'type', 'eyes', 'mouth', 'headphones']
+      if (MANDATORY.includes(key) && key !== 'type' && key !== 'eyes') {
         t[key] = pick(files)
       } else if (key === 'type') {
         // Weighted type selection (matches avatar-maker)
