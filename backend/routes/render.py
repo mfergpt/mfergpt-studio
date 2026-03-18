@@ -6,8 +6,9 @@ from pathlib import Path
 from fastapi import APIRouter, Depends
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
+import httpx
 from security import validate_mfer_id, validate_theme, validate_prompt, validate_collection, require_token_gate
-from config import SCRIPTS_DIR, OUTPUT_DIR, ALLOWED_THEMES
+from config import SCRIPTS_DIR, OUTPUT_DIR, ALLOWED_THEMES, CYBERMFER_CDN_URL
 
 router = APIRouter(tags=["render"])
 
@@ -63,14 +64,26 @@ async def render(req: RenderRequest):
     if req.collection:
         collection = validate_collection(req.collection)
 
+    # For 3d collection: download CDN PNG and use --from-image
+    from_image_path = None
+    if collection == "3d":
+        import httpx
+        cdn_url = f"{CYBERMFER_CDN_URL}/{mfer_id}.png"
+        from_image_path = OUTPUT_DIR / f"3d-source-{job_id}.png"
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.get(cdn_url)
+            if resp.status_code != 200:
+                return {"error": f"failed to download 3d mfer #{mfer_id} from CDN"}
+            from_image_path.write_bytes(resp.content)
+
     # Build command as ARRAY — never shell=True, never string interpolation
-    cmd = [
-        "python3", "-m", "mfer_gen",
-        "--id", str(mfer_id),
-        "--theme", theme,
-        "-o", str(output_requested),
-    ]
-    if collection:
+    cmd = ["python3", "-m", "mfer_gen"]
+    if from_image_path:
+        cmd.extend(["--from-image", str(from_image_path)])
+    else:
+        cmd.extend(["--id", str(mfer_id)])
+    cmd.extend(["--theme", theme, "-o", str(output_requested)])
+    if collection and collection != "3d":
         cmd.extend(["--collection", collection])
     
     # Format: gif (animated, default), png (static), mp4 (animated video)

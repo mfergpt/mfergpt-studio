@@ -91,6 +91,9 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 # Allowed derivative collections for mfer_gen
 ALLOWED_COLLECTIONS = frozenset([
-    'creyzies', 'eos', 'fineart', 'mfersahead', 'mfersbehind',
+    '3d', 'creyzies', 'eos', 'fineart', 'mfersahead', 'mfersbehind',
     'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs'
 ])
+
+# 3D mfer CDN
+CYBERMFER_CDN_URL = "https://cybermfers.sfo3.digitaloceanspaces.com/cybermfers/private/assets/png"

@@ -13,6 +13,7 @@ export const TOKEN_GATE_USD = 5
 
 export const MFER_HEADS_URL = (id: number) => `https://heads.mfers.dev/${id}.png`
 export const MFER_CLEAR_URL = (id: number) => `https://clear.mfers.dev/${id}.png`
+export const MFER_3D_URL = (id: number) => `https://cybermfers.sfo3.digitaloceanspaces.com/cybermfers/private/assets/png/${id}.png`
 export const MAX_MFER_ID = 10020
 
 export const API_URL = import.meta.env.VITE_API_URL || 'https://studio.mfergpt.lol'
@@ -39,8 +40,11 @@ export const THEMES = [
 export type Theme = typeof THEMES[number]
 
 export const COLLECTIONS = [
-  'og', 'creyzies', 'eos', 'fineart', 'mfersahead',
+  'og', '3d', 'creyzies', 'eos', 'fineart', 'mfersahead',
   'mfersbehind', 'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs'
 ] as const
+
+// Collections available for theme rendering (no 3d — needs full composed image)
+export const THEME_COLLECTIONS = COLLECTIONS.filter(c => c !== '3d')
 
 export type Collection = typeof COLLECTIONS[number]

@@ -353,7 +353,7 @@ def _layer_dict_to_legacy_traits(layer_dict: dict[str, str]) -> dict[str, str]:
 
 
 def _render_direct(layer_dict: dict[str, str], collection: str | None,
-                   theme: str | None, output_path: str) -> str:
+                   theme: str | None, output_path: str, animated: bool = False) -> str:
     """Render using the Python compositor directly (no CLI subprocess)."""
     from mfer_gen.renderers._collection_state import set_active_collection, get_active_collection
     from mfer_gen.renderers.png_composer import PNGComposer, find_layer, LAYER_ORDER
@@ -389,7 +389,7 @@ def _render_direct(layer_dict: dict[str, str], collection: str | None,
                     legacy_traits[key] = v
             colors = resolve_colors(legacy_traits)
             positions = get_position_map(renderer.default_positions)
-            return renderer.render(legacy_traits, colors, positions, output_path)
+            return renderer.render(legacy_traits, colors, positions, output_path, animated=animated, anim_size=500)
         else:
             # Original PNG compositor — render directly from layer files
             canvas = None
@@ -466,10 +466,16 @@ async def render_traits(req: TraitRenderRequest):
     # Build layer dict from creator traits
     layer_dict = _creator_traits_to_layer_dict(traits, collection)
 
+    # Determine if animated
+    fmt = req.format.lower()
+    animated = fmt != 'png'
+    if animated:
+        output_path = str(OUTPUT_DIR / f"create-{job_id}.gif")
+
     # Render directly via Python compositor
     try:
         result_path = await asyncio.get_event_loop().run_in_executor(
-            None, _render_direct, layer_dict, collection, theme, output_path
+            None, _render_direct, layer_dict, collection, theme, output_path, animated
         )
     except Exception as e:
         import traceback

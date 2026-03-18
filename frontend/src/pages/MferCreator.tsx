@@ -1,5 +1,34 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
 import { COLLECTIONS } from '../lib/wagmi'
+import type { ThreePreviewHandle } from '../components/ThreePreview'
+import { TRAIT_MESH_MAPPING } from '../components/traitMeshMapping'
+
+const ThreePreview = lazy(() => import('../components/ThreePreview'))
+
+// Map TRAIT_MESH_MAPPING categories back to creator category keys
+const CATEGORY_3D_REVERSE: Record<string, string> = {
+  hat_over_headphones: 'hat_over',
+  hat_under_headphones: 'hat_under',
+}
+
+// Build 3D layer options from TRAIT_MESH_MAPPING keys
+function build3DLayerOptions(): Record<string, string[]> {
+  const options: Record<string, string[]> = {}
+  for (const { key } of CATEGORIES) {
+    const meshKey = key === 'hat_over' ? 'hat_over_headphones'
+      : key === 'hat_under' ? 'hat_under_headphones'
+      : key
+    const mapping = TRAIT_MESH_MAPPING[meshKey]
+    if (mapping) {
+      options[key] = Object.keys(mapping)
+    } else if (key === 'background') {
+      options[key] = ['blue', 'red', 'green', 'yellow', 'orange', 'purple', 'turquoise', 'space', 'tree', 'graveyard']
+    } else {
+      options[key] = []
+    }
+  }
+  return options
+}
 
 // --- Constants ---
 
@@ -165,6 +194,7 @@ function buildFolderToKey(layerData: LayerData): Record<string, TraitKey> {
 
 export default function MferCreator() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const threeRef = useRef<ThreePreviewHandle>(null)
   const [traits, setTraits] = useState<Record<string, string>>(getDefaultTraits())
   const [collection, setCollection] = useState<string>('og')
   const [saved, setSaved] = useState<SavedMfer[]>(loadSaved())
@@ -184,6 +214,17 @@ export default function MferCreator() {
 
   // Fetch layers and trait map when collection changes
   useEffect(() => {
+    // 3D collection: build options from TRAIT_MESH_MAPPING, no API call
+    if (collection === '3d') {
+      const options = build3DLayerOptions()
+      setLayerOptions(options)
+      setKeyToFolder(FOLDER_MAP)
+      setTraitMap({})
+      setMissingCategories(new Set())
+      setLoading(false)
+      return
+    }
+
     let cancelled = false
     setLoading(true)
 
@@ -234,8 +275,21 @@ export default function MferCreator() {
     return () => { cancelled = true }
   }, [collection])
 
-  // Composite canvas whenever traits or collection change
+  // Auto-generate a random mfer on first load or when collection changes (if traits are all 'none')
+  const initialRandomDone = useRef(false)
+  useEffect(() => {
+    if (!loading && Object.keys(layerOptions).length > 0) {
+      const allNone = Object.values(traits).every(v => v === 'none')
+      if (allNone || !initialRandomDone.current) {
+        initialRandomDone.current = true
+        handleRandom()
+      }
+    }
+  }, [loading, layerOptions])
+
+  // Composite canvas whenever traits or collection change (2D only)
   const compositeCanvas = useCallback(async () => {
+    if (collection === '3d') return
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
@@ -405,12 +459,33 @@ export default function MferCreator() {
   }
 
   const handleDownload = () => {
+    if (collection === '3d') {
+      const dataUrl = threeRef.current?.captureScreenshot()
+      if (!dataUrl) return
+      const link = document.createElement('a')
+      link.download = 'mfer-custom.png'
+      link.href = dataUrl
+      link.click()
+      return
+    }
     const canvas = canvasRef.current
     if (!canvas) return
     const link = document.createElement('a')
     link.download = 'mfer-custom.png'
     link.href = canvas.toDataURL('image/png')
     link.click()
+  }
+
+  const handleDownloadGlb = async () => {
+    const data = await threeRef.current?.exportGlb()
+    if (!data) return
+    const blob = new Blob([data], { type: 'model/gltf-binary' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.download = 'mfer-custom.glb'
+    link.href = url
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   const handleSave = () => {
@@ -508,6 +583,16 @@ export default function MferCreator() {
             download png
           </button>
 
+          {collection === '3d' && (
+            <button
+              onClick={handleDownloadGlb}
+              disabled={activeTraitCount === 0}
+              className="w-full bg-[#222] hover:bg-[#333] text-[#00ff41] font-bold py-2.5 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm border border-[#00ff41]/30"
+            >
+              download glb
+            </button>
+          )}
+
           {/* Trait count */}
           <div className="text-xs text-gray-500">
             {activeTraitCount} trait{activeTraitCount !== 1 ? 's' : ''} selected
@@ -562,17 +647,33 @@ export default function MferCreator() {
         </div>
 
         {/* CENTER — canvas preview */}
-        <div className="flex-shrink-0 order-1 lg:order-2 flex justify-center">
+        <div className="flex-shrink-0 order-1 lg:order-2 flex flex-col items-center gap-2">
           <div className="relative">
-            <canvas
-              ref={canvasRef}
-              width={1000}
-              height={1000}
-              className="w-full max-w-[500px] lg:w-[500px] h-auto rounded-lg border border-[#222] bg-[#0a0a0a]"
-            />
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
-                <span className="text-gray-400 text-sm">loading layers...</span>
+            {collection !== '3d' ? (
+              <>
+                <canvas
+                  ref={canvasRef}
+                  width={1000}
+                  height={1000}
+                  className="w-full max-w-[500px] lg:w-[500px] h-auto rounded-lg border border-[#222] bg-[#0a0a0a]"
+                />
+                {loading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
+                    <span className="text-gray-400 text-sm">loading layers...</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="w-full max-w-[500px] lg:w-[500px] aspect-square rounded-lg border border-[#222] overflow-hidden">
+                <Suspense
+                  fallback={
+                    <div className="w-full h-full flex items-center justify-center bg-[#111]">
+                      <span className="text-gray-400 text-sm">loading 3D viewer...</span>
+                    </div>
+                  }
+                >
+                  <ThreePreview ref={threeRef} traits={traits} />
+                </Suspense>
               </div>
             )}
           </div>
@@ -633,7 +734,6 @@ export default function MferCreator() {
 
             {currentOptions.map(filename => {
               const isSelected = currentTraitValue === filename
-              const src = thumbUrl(activeTab, filename)
               return (
                 <button
                   key={filename}
@@ -644,17 +744,25 @@ export default function MferCreator() {
                       : 'border-[#1a1a1a] bg-[#0d0d0d] hover:border-[#333]'
                     }`}
                 >
-                  <div className="w-full aspect-square rounded bg-[#111] overflow-hidden relative">
-                    <img
-                      src={src}
-                      alt={displayName(filename)}
-                      loading="lazy"
-                      className="w-full h-full object-contain"
-                      style={{ imageRendering: 'auto' }}
-                    />
-                  </div>
+                  {collection === '3d' ? (
+                    <div className="w-full aspect-square rounded bg-[#111] flex items-center justify-center">
+                      <span className={`text-xs text-center px-1 ${isSelected ? 'text-[#00ff41]' : 'text-gray-400'}`}>
+                        {displayName(filename).replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="w-full aspect-square rounded bg-[#111] overflow-hidden relative">
+                      <img
+                        src={thumbUrl(activeTab, filename)}
+                        alt={displayName(filename)}
+                        loading="lazy"
+                        className="w-full h-full object-contain"
+                        style={{ imageRendering: 'auto' }}
+                      />
+                    </div>
+                  )}
                   <span className={`text-[10px] truncate w-full text-center ${isSelected ? 'text-[#00ff41]' : 'text-gray-500'}`}>
-                    {displayName(filename)}
+                    {displayName(filename).replace(/_/g, ' ')}
                   </span>
                 </button>
               )

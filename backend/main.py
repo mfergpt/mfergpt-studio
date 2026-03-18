@@ -35,6 +35,7 @@ DERIVATIVE_DIR_MAP = {
     "sketchy": "sketchyMfers",
     "somfers": "somfers",
     "mfpurrs": "mfpurrs",
+    "3d": "3d",
 }
 
 # Rate limiter

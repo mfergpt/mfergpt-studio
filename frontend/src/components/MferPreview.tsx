@@ -1,16 +1,18 @@
-import { useState } from 'react'
-import { MFER_HEADS_URL, MFER_CLEAR_URL, MAX_MFER_ID } from '../lib/wagmi'
+import { useState, useEffect } from 'react'
+import { MFER_HEADS_URL, MFER_CLEAR_URL, MFER_3D_URL, MAX_MFER_ID } from '../lib/wagmi'
 
 interface Props {
   id: number
   size?: number
   variant?: 'head' | 'clear'
+  collection?: string
   className?: string
 }
 
-export default function MferPreview({ id, size = 200, variant = 'clear', className = '' }: Props) {
+export default function MferPreview({ id, size = 200, variant = 'clear', collection, className = '' }: Props) {
   const [error, setError] = useState(false)
-  const url = variant === 'head' ? MFER_HEADS_URL(id) : MFER_CLEAR_URL(id)
+  useEffect(() => setError(false), [id, collection])
+  const url = collection === '3d' ? MFER_3D_URL(id) : variant === 'head' ? MFER_HEADS_URL(id) : MFER_CLEAR_URL(id)
 
   if (error || id < 0 || id > MAX_MFER_ID) {
     return (

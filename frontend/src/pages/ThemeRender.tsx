@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { THEMES, MAX_MFER_ID, COLLECTIONS } from '../lib/wagmi'
+import { THEMES, MAX_MFER_ID, THEME_COLLECTIONS } from '../lib/wagmi'
 import { api } from '../lib/api'
 import MferPreview, { RandomMferButton } from '../components/MferPreview'
 import { Link } from 'react-router-dom'
@@ -161,7 +161,7 @@ export default function ThemeRender() {
 
               {/* Preview */}
               <div className="flex justify-center">
-                <MferPreview id={mferId} size={160} />
+                <MferPreview id={mferId} size={160} collection={collection} />
               </div>
             </>
           ) : (
@@ -258,7 +258,7 @@ export default function ThemeRender() {
             <label className="text-sm text-gray-400 mb-1 block">collection</label>
             <p className="text-xs text-gray-600 mb-2">{source === 'saved' ? 'change derivative style for your saved mfer' : 'render any mfer in derivative styles'}</p>
               <div className="flex flex-wrap gap-2">
-                {COLLECTIONS.map(c => (
+                {THEME_COLLECTIONS.map(c => (
                   <button
                     key={c}
                     onClick={() => setCollection(c)}
