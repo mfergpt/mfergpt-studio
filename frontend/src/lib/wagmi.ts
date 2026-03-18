@@ -32,7 +32,7 @@ export type Theme = typeof THEMES[number]
 
 export const COLLECTIONS = [
   'og', 'creyzies', 'eos', 'fineart', 'mfersahead',
-  'mfersbehind', 'sketchy', 'extended', 'mpher'
+  'mfersbehind', 'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs'
 ] as const
 
 export type Collection = typeof COLLECTIONS[number]
