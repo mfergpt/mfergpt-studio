@@ -67,12 +67,21 @@ export default function ThemeRender() {
       } else {
         blob = await api.render(mferId, selectedTheme, format, collection)
       }
-      // Convert blob to data URL to avoid HTTP/blob security issues
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setResult(reader.result as string)
+      // Check if response is actually an image
+      if (blob.type.startsWith('application/json')) {
+        const text = await blob.text()
+        setError(`render error: ${text}`)
+        setRendering(false)
+        return
       }
-      reader.readAsDataURL(blob)
+      // Convert blob to data URL (promisified)
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.onerror = () => reject(new Error('failed to read image'))
+        reader.readAsDataURL(blob)
+      })
+      setResult(dataUrl)
     } catch (e: any) {
       console.error('[render] error:', e)
       setError(e.message || 'render failed — is the backend running?')
