@@ -20,6 +20,23 @@ from routes import auth, render, identify, mferfy, scene, gmgn, create
 
 FRONTEND_DIR = Path("/Users/mfergpt/dev/mfergpt-studio/frontend/dist")
 
+# Layer directories
+OG_LAYERS_DIR = Path("/Users/mfergpt/.openclaw/workspace/data/mfer-layers")
+DERIVATIVE_LAYERS_DIR = Path("/Users/mfergpt/.openclaw/workspace/data/derivative-layers")
+EXTENDED_LAYERS_DIR = Path("/Users/mfergpt/.openclaw/workspace/data/mfer-layers-extended")
+
+# Map UI collection names → derivative directory names
+DERIVATIVE_DIR_MAP = {
+    "creyzies": "creyzies",
+    "eos": "eos",
+    "fineart": "fineArtMfers",
+    "mfersahead": "mfersAhead",
+    "mfersbehind": "mfersBehind",
+    "sketchy": "sketchyMfers",
+    "somfers": "somfers",
+    "mfpurrs": "mfpurrs",
+}
+
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=[RATE_LIMIT_FREE])
 
@@ -80,6 +97,44 @@ async def get_mfer(mfer_id: int):
         "headUrl": f"https://heads.mfers.dev/{mid}.png",
         "clearUrl": f"https://clear.mfers.dev/{mid}.png",
     }
+
+@app.get("/api/layers/{collection}")
+async def list_layers(collection: str):
+    """List available layer files per category for a collection."""
+    if collection == "og":
+        base = OG_LAYERS_DIR
+    elif collection == "extended":
+        base = EXTENDED_LAYERS_DIR
+    else:
+        dirname = DERIVATIVE_DIR_MAP.get(collection)
+        if not dirname:
+            return JSONResponse({"error": "unknown collection"}, status_code=404)
+        base = DERIVATIVE_LAYERS_DIR / dirname
+    if not base.is_dir():
+        return JSONResponse({"error": "collection not found"}, status_code=404)
+    result = {}
+    for subdir in sorted(base.iterdir()):
+        if not subdir.is_dir():
+            continue
+        files = sorted(
+            f.name for f in subdir.iterdir()
+            if f.is_file() and f.suffix.lower() == ".png" and f.name != "none.png"
+        )
+        if files:
+            result[subdir.name] = files
+    return result
+
+# Serve OG mfer layers as static files
+if OG_LAYERS_DIR.is_dir():
+    app.mount("/layers/og", StaticFiles(directory=str(OG_LAYERS_DIR)), name="og-layers")
+
+# Serve extended layers (must be mounted BEFORE the general derivatives mount)
+if EXTENDED_LAYERS_DIR.is_dir():
+    app.mount("/layers/derivatives/extended", StaticFiles(directory=str(EXTENDED_LAYERS_DIR)), name="extended-layers")
+
+# Serve derivative layers as static files
+if DERIVATIVE_LAYERS_DIR.is_dir():
+    app.mount("/layers/derivatives", StaticFiles(directory=str(DERIVATIVE_LAYERS_DIR)), name="derivative-layers")
 
 # Serve frontend — must be LAST (catch-all)
 if FRONTEND_DIR.exists():

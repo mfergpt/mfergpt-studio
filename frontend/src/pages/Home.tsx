@@ -5,7 +5,7 @@ import { MFER_CLEAR_URL } from '../lib/wagmi'
 
 const FEATURES = [
   { path: '/render', icon: '🎨', title: 'Theme Render', desc: '48 built-in themes. Pick a mfer, pick a style, get art.', free: true },
-  // { path: '/create', icon: '🛠', title: 'Mfer Creator', desc: 'Pick traits. Build a custom mfer from scratch.', free: true },
+  { path: '/create', icon: '🛠', title: 'Mfer Creator', desc: 'Pick traits. Build a custom mfer from scratch.', free: true },
   // { path: '/identify', icon: '🔍', title: 'Trait Identifier', desc: 'Upload any mfer image. We identify every trait.', free: true },
   { path: '/avatars', icon: '🧊', title: '3D Avatars', desc: 'Create your own 3D mfer avatar.', free: true },
   { path: '/gmgn', icon: '☀️🌙', title: 'GM/GN Videos', desc: '3D turntable videos. Say gm or gn with your mfer.', free: true },

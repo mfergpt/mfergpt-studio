@@ -11,55 +11,166 @@ from config import SCRIPTS_DIR, OUTPUT_DIR
 router = APIRouter(tags=["create"])
 
 
+@router.get("/trait-map/{collection}")
+async def get_trait_map(collection: str):
+    """Return OG→derivative trait name mapping for a collection."""
+    import sys
+    sys.path.insert(0, '/Users/mfergpt/.openclaw/workspace/scripts')
+    from mfer_gen.renderers.trait_maps import COLLECTION_MAPS
+
+    coll_key_map = {
+        'creyzies': 'creyzies', 'eos': 'eos', 'fineart': 'fineArtMfers',
+        'mfersahead': 'mfersAhead', 'mfersbehind': 'mfersBehind',
+        'sketchy': 'sketchyMfers', 'somfers': 'somfers', 'mfpurrs': 'mfpurrs',
+    }
+
+    key = coll_key_map.get(collection)
+    if not key or key not in COLLECTION_MAPS:
+        return {}
+
+    return COLLECTION_MAPS[key]
+
+
 class TraitRenderRequest(BaseModel):
     traits: dict[str, str]
     collection: str = "og"
     format: str = "gif"
+    theme: str | None = None
 
 
-# Simple category -> CLI flag mappings
-_SIMPLE_FLAGS = {
-    'background': '--bg',
-    'type': '--type',
-    'eyes': '--eyes',
-    'mouth': '--mouth',
-    'headphones': '--headphones',
-    'chain': '--chain',
-    'watch': '--watch',
-    'beard': '--beard',
-    'smoke': '--smoke',
+# Map layer filenames → CLI flag values
+# CLI expects short names: --type plain, --eyes 3d, --smoke cig, etc.
+_TYPE_MAP = {
+    'plain mfer': 'plain', 'charcoal mfer': 'charcoal', 'ape mfer': 'ape',
+    'alien mfer': 'alien', 'zombie mfer': 'zombie',
 }
-
-# Categories that split into name + color
-_SPLIT_FLAGS = {
-    'hat_over': ('--hat', '--hat-color'),
-    'hat_under': ('--hat', '--hat-color'),
-    'short_hair': ('--hair', '--hair-color'),
-    'long_hair': ('--hair', '--hair-color'),
-    'shirt': ('--shirt', '--shirt-color'),
+_EYES_MAP = {
+    'regular eyes': 'normal', 'shades': 'shades', '3d glasses': '3d', '3D glasses': '3d',
+    'nerd glasses': 'nerd', 'vr': 'vr', 'eye patch': 'patch', 'eye mask': 'mask',
+    'purple shades': 'shades',
 }
+_SMOKE_MAP = {
+    'cig black': 'cig', 'cig white': 'cig', 'pipe': 'pipe', 'brown pipe': 'pipe',
+}
+_CHAIN_MAP = {'gold chain': 'gold', 'silver chain': 'silver'}
+_BEARD_MAP = {'full beard': 'full', 'shadow': 'shadow', 'shadow beard': 'shadow'}
+_WATCH_MAP = {
+    'argo black': 'black', 'argo white': 'black', 'oyster gold': 'gold', 'oyster silver': 'gold',
+    'sub black': 'black', 'sub blue': 'black', 'sub red': 'red', 'sub green': 'black',
+    'sub turquoise': 'black', 'sub white': 'black', 'sub bat (blue/black)': 'black',
+    'sub lantern (green)': 'black',
+}
+# Headphones: just need the color
+_HP_COLORS = {'black', 'red', 'blue', 'green', 'pink', 'gold', 'white', 'lined', 'purple', 'orange'}
 
-_COLORS = frozenset([
-    'black', 'white', 'red', 'blue', 'green', 'yellow', 'orange', 'purple',
-    'pink', 'gold', 'brown', 'blonde', 'aqua', 'lined',
-])
+# Hat: extract hat type + color
+_HAT_TYPE_MAP = {
+    'cowboy hat': ('cowboy', None), 'top hat': ('tophat', None), 'pilot helmet': ('tophat', None),
+    'mesa hat': ('cap', None),
+}
+# Hair: extract style + color
+_HAIR_STYLE_MAP = {'messy': 'messy', 'mohawk': 'mohawk', 'long hair': 'long'}
+# Shirt: extract style + color
+_SHIRT_STYLE_MAP = {'collared shirt': 'collared', 'hoodie down': 'hoodie_down'}
 
 
 def _traits_to_cli(traits: dict[str, str]) -> list[str]:
     """Convert validated trait dict to CLI arguments."""
     args: list[str] = []
     for category, value in traits.items():
-        if value == 'none':
+        if value == 'none' or not value:
             continue
-        if category in _SIMPLE_FLAGS:
-            args.extend([_SIMPLE_FLAGS[category], value])
-        elif category in _SPLIT_FLAGS:
-            flag_name, flag_color = _SPLIT_FLAGS[category]
-            parts = value.rsplit(' ', 1)
-            if len(parts) == 2 and parts[1].lower() in _COLORS:
-                args.extend([flag_name, parts[0], flag_color, parts[1]])
-            else:
-                args.extend([flag_name, value])
+
+        if category == 'background':
+            args.extend(['--bg', value])
+
+        elif category == 'type':
+            mapped = _TYPE_MAP.get(value, value.replace(' mfer', ''))
+            args.extend(['--type', mapped])
+
+        elif category == 'eyes':
+            mapped = _EYES_MAP.get(value, 'normal')
+            args.extend(['--eyes', mapped])
+
+        elif category == 'mouth':
+            args.extend(['--mouth', value])
+
+        elif category == 'headphones':
+            # Value might be "black headphones" or just "black"
+            color = value.replace(' headphones', '').lower()
+            if color in _HP_COLORS:
+                args.extend(['--headphones', color])
+
+        elif category == 'smoke':
+            mapped = _SMOKE_MAP.get(value, 'cig')
+            args.extend(['--smoke', mapped])
+
+        elif category == 'chain':
+            mapped = _CHAIN_MAP.get(value, value.replace(' chain', ''))
+            args.extend(['--chain', mapped])
+
+        elif category == 'watch':
+            mapped = _WATCH_MAP.get(value, 'black')
+            args.extend(['--watch', mapped])
+
+        elif category == 'beard':
+            mapped = _BEARD_MAP.get(value, 'full')
+            args.extend(['--beard', mapped])
+
+        elif category in ('hat_over', 'hat_under'):
+            if value in _HAT_TYPE_MAP:
+                hat_type, _ = _HAT_TYPE_MAP[value]
+                args.extend(['--hat', hat_type])
+            elif value.startswith('hoodie'):
+                args.extend(['--hat', 'hoodie'])
+                # Extract color if present
+                parts = value.split()
+                if len(parts) > 1:
+                    args.extend(['--hat-color', parts[-1]])
+            elif value.startswith('bandana'):
+                args.extend(['--hat', 'bandana'])
+                parts = value.split()
+                if len(parts) > 1:
+                    args.extend(['--hat-color', parts[-1]])
+            elif value.startswith('beanie'):
+                args.extend(['--hat', 'beanie'])
+            elif value.startswith('cap'):
+                args.extend(['--hat', 'cap'])
+                parts = value.split()
+                if len(parts) > 1 and parts[-1] in _HP_COLORS:
+                    args.extend(['--hat-color', parts[-1]])
+            elif value.startswith('knit'):
+                args.extend(['--hat', 'beanie'])
+            elif value.startswith('headband'):
+                args.extend(['--hat', 'bandana'])
+                parts = value.split()
+                if len(parts) > 1 and parts[-1] in _HP_COLORS:
+                    args.extend(['--hat-color', parts[-1]])
+
+        elif category == 'short_hair':
+            for style_name, style_val in _HAIR_STYLE_MAP.items():
+                if value.startswith(style_name):
+                    args.extend(['--hair', style_val])
+                    color = value.replace(style_name, '').strip()
+                    if color:
+                        args.extend(['--hair-color', color])
+                    break
+
+        elif category == 'long_hair':
+            args.extend(['--hair', 'long'])
+            color = value.replace('long hair', '').strip()
+            if color:
+                args.extend(['--hair-color', color])
+
+        elif category == 'shirt':
+            for style_name, style_val in _SHIRT_STYLE_MAP.items():
+                if value.startswith(style_name):
+                    args.extend(['--shirt', style_val])
+                    color = value.replace(style_name, '').strip()
+                    if color:
+                        args.extend(['--shirt-color', color])
+                    break
+
     return args
 
 
@@ -85,6 +196,7 @@ def _media_type(path: Path) -> str:
 @router.post("/render-traits")
 async def render_traits(req: TraitRenderRequest):
     """Free trait-based mfer render — all values whitelisted."""
+    print(f"[render-traits] collection={req.collection}, theme={req.theme}, format={req.format}, traits_keys={list(req.traits.keys())}", flush=True)
     traits = validate_traits(req.traits)
 
     collection = None
@@ -105,6 +217,11 @@ async def render_traits(req: TraitRenderRequest):
 
     if collection:
         cmd.extend(["--collection", collection])
+
+    if req.theme:
+        from security import validate_theme
+        theme = validate_theme(req.theme)
+        cmd.extend(["--theme", theme])
 
     fmt = req.format.lower()
     if fmt == "png":

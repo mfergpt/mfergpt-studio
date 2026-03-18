@@ -37,9 +37,10 @@ class StudioAPI {
     return res.blob()
   }
 
-  async renderTraits(traits: Record<string, string>, collection: string = 'og', format: 'gif' | 'png' = 'gif') {
+  async renderTraits(traits: Record<string, string>, collection: string = 'og', format: 'gif' | 'png' | 'mp4' = 'gif', theme?: string) {
     const body: Record<string, any> = { traits, format }
     if (collection && collection !== 'og') body.collection = collection
+    if (theme) body.theme = theme
     const res = await this.request('/render-traits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

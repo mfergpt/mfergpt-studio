@@ -58,21 +58,23 @@ ALLOWED_ORIGINS = [
 ]
 
 # Allowed trait values for mfer creator — WHITELIST only
+# Accept both layer filenames (from creator) and short CLI names
+# _traits_to_cli() in create.py handles conversion to CLI flags
 ALLOWED_TRAIT_VALUES = {
-    'background': frozenset(['none', 'blue', 'red', 'green', 'yellow', 'orange', 'purple', 'tree', 'space', 'graveyard']),
-    'type': frozenset(['none', 'plain mfer', 'charcoal mfer', 'ape mfer', 'alien mfer', 'zombie mfer']),
-    'eyes': frozenset(['none', 'regular eyes', 'shades', '3d glasses', 'nerd glasses', 'vr', 'eye patch', 'eye mask', 'purple shades']),
+    'background': frozenset(['none', 'blue', 'red', 'green', 'yellow', 'orange', 'purple', 'tree', 'space', 'graveyard', 'turquoise', 'dark', 'pink', 'alien spaceship', 'glowing zombie moon', 'lol', 'pcpurple', 'twitter circle']),
+    'type': frozenset(['none', 'plain mfer', 'charcoal mfer', 'ape mfer', 'alien mfer', 'zombie mfer', 'plain', 'charcoal', 'ape', 'alien', 'zombie']),
+    'eyes': frozenset(['none', 'regular eyes', 'shades', '3d glasses', '3D glasses', 'nerd glasses', 'vr', 'eye patch', 'eye mask', 'purple shades', 'normal', '3d', 'nerd', 'patch', 'mask', 'alien eyes', 'zombie eyes']),
     'mouth': frozenset(['none', 'flat', 'smile']),
-    'headphones': frozenset(['none', 'black', 'red', 'blue', 'green', 'pink', 'gold', 'white', 'lined', 'orange', 'purple']),
-    'hat_over': frozenset(['none', 'cowboy hat', 'top hat', 'pilot helmet', 'hoodie red', 'hoodie blue', 'hoodie green', 'hoodie yellow', 'hoodie orange', 'hoodie purple', 'hoodie black', 'hoodie white']),
-    'hat_under': frozenset(['none', 'bandana red', 'bandana blue', 'bandana green', 'beanie red', 'beanie blue', 'beanie black', 'cap red', 'cap blue', 'cap black', 'cap forward red', 'cap forward blue', 'cap forward black', 'headband red', 'headband blue', 'headband green', 'knit red', 'knit blue', 'knit black', 'mesa hat']),
-    'short_hair': frozenset(['none', 'messy black', 'messy brown', 'messy blonde', 'messy red', 'mohawk black', 'mohawk brown', 'mohawk blonde', 'mohawk red', 'mohawk green', 'mohawk purple', 'mohawk pink']),
+    'headphones': frozenset(['none', 'black', 'red', 'blue', 'green', 'pink', 'gold', 'white', 'lined', 'orange', 'purple', 'black headphones', 'red headphones', 'blue headphones', 'green headphones', 'pink headphones', 'gold headphones', 'white headphones', 'lined headphones', 'orange headphones', 'purple headphones']),
+    'hat_over': frozenset(['none', 'cowboy hat', 'top hat', 'pilot helmet', 'hoodie', 'hoodie red', 'hoodie blue', 'hoodie green', 'hoodie yellow', 'hoodie orange', 'hoodie purple', 'hoodie black', 'hoodie white', 'hoodie pink', 'hoodie gray', 'hoodie blue og', 'hoodie green og']),
+    'hat_under': frozenset(['none', 'bandana red', 'bandana blue', 'bandana dark gray', 'bandana green', 'beanie', 'beanie monochrome', 'beanie red', 'beanie blue', 'beanie black', 'cap red', 'cap blue', 'cap black', 'cap forward', 'cap forward red', 'cap forward blue', 'cap forward black', 'cap green', 'cap pink', 'cap purple', 'cap white', 'cap monochrome', 'headband blue/white', 'headband red/white', 'headband blue/green', 'headband blue/red', 'headband green/white', 'headband pink/white', 'headband red', 'headband blue', 'headband green', 'knit red', 'knit blue', 'knit black', 'knit las vegas', 'knit green/yellow', 'knit pink/blue', 'knit red/blue/yellow', 'knit white/pink', 'knit atlanta', 'knit baltimore', 'knit buffalo', 'knit chicago', 'knit cleveland', 'knit dallas', 'knit kc', 'knit miami', 'knit new york', 'knit pittsburgh', 'knit san fran', 'mesa hat']),
+    'short_hair': frozenset(['none', 'messy black', 'messy purple', 'messy red', 'messy yellow', 'messy brown', 'messy blonde', 'mohawk black', 'mohawk blue', 'mohawk green', 'mohawk pink', 'mohawk purple', 'mohawk red', 'mohawk white', 'mohawk yellow', 'mohawk brown', 'mohawk blonde']),
     'long_hair': frozenset(['none', 'long hair black', 'long hair yellow']),
-    'shirt': frozenset(['none', 'collared shirt white', 'collared shirt blue', 'collared shirt red', 'collared shirt green', 'hoodie down red', 'hoodie down blue', 'hoodie down green', 'hoodie down black', 'hoodie down orange', 'hoodie down purple']),
-    'chain': frozenset(['none', 'gold chain', 'silver chain']),
-    'watch': frozenset(['none', 'argo', 'oyster', 'sub aqua', 'sub black', 'sub green', 'sub blue']),
-    'beard': frozenset(['none', 'full beard', 'shadow beard']),
-    'smoke': frozenset(['none', 'cig black', 'cig white', 'pipe']),
+    'shirt': frozenset(['none', 'collared shirt white', 'collared shirt blue', 'collared shirt green', 'collared shirt pink', 'collared shirt turquoise', 'collared shirt red', 'collared shirt yellow', 'hoodie down gray', 'hoodie down blue', 'hoodie down green', 'hoodie down pink', 'hoodie down purple', 'hoodie down red', 'hoodie down white', 'hoodie down black', 'hoodie down orange']),
+    'chain': frozenset(['none', 'gold chain', 'silver chain', 'gold', 'silver']),
+    'watch': frozenset(['none', 'argo black', 'argo white', 'oyster gold', 'oyster silver', 'sub black', 'sub blue', 'sub red', 'sub green', 'sub turquoise', 'sub white', 'sub bat (blue/black)', 'sub lantern (green)', 'sub aqua', 'argo', 'oyster', 'black', 'gold', 'red']),
+    'beard': frozenset(['none', 'full beard', 'shadow beard', 'shadow', 'full']),
+    'smoke': frozenset(['none', 'cig black', 'cig white', 'pipe', 'brown pipe', 'cig']),
 }
 
 # OpenAI (for mferfy + custom themes)
