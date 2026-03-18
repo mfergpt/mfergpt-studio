@@ -16,6 +16,7 @@ import ThemeRender from './pages/ThemeRender'
 import Avatars from './pages/Avatars'
 import Token from './pages/Token'
 import GmGn from './pages/GmGn'
+import MferCreator from './pages/MferCreator'
 
 const queryClient = new QueryClient()
 
@@ -36,6 +37,7 @@ function App() {
               <Route element={<Layout />}>
                 <Route path="/" element={<Home />} />
                 <Route path="/render" element={<ThemeRender />} />
+                <Route path="/create" element={<MferCreator />} />
                 {/* <Route path="/identify" element={<Identify />} /> */}
                 <Route path="/avatars" element={<Avatars />} />
                 <Route path="/token" element={<Token />} />

@@ -5,6 +5,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 const NAV_ITEMS = [
   { path: '/', label: 'Home', icon: '⌂' },
   { path: '/render', label: 'Theme Render', icon: '🎨', free: true },
+  { path: '/create', label: 'Mfer Creator', icon: '🛠', free: true },
   // { path: '/identify', label: 'Identify', icon: '🔍', free: true },
   // { path: '/mferfy', label: 'Mferfy', icon: '🎧', free: false },
   // { path: '/custom', label: 'Custom Theme', icon: '✨', free: false },

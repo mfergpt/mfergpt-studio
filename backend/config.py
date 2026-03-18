@@ -57,6 +57,24 @@ ALLOWED_ORIGINS = [
     "http://192.168.50.206:8080",
 ]
 
+# Allowed trait values for mfer creator — WHITELIST only
+ALLOWED_TRAIT_VALUES = {
+    'background': frozenset(['none', 'blue', 'red', 'green', 'yellow', 'orange', 'purple', 'tree', 'space', 'graveyard']),
+    'type': frozenset(['none', 'plain mfer', 'charcoal mfer', 'ape mfer', 'alien mfer', 'zombie mfer']),
+    'eyes': frozenset(['none', 'regular eyes', 'shades', '3d glasses', 'nerd glasses', 'vr', 'eye patch', 'eye mask', 'purple shades']),
+    'mouth': frozenset(['none', 'flat', 'smile']),
+    'headphones': frozenset(['none', 'black', 'red', 'blue', 'green', 'pink', 'gold', 'white', 'lined', 'orange', 'purple']),
+    'hat_over': frozenset(['none', 'cowboy hat', 'top hat', 'pilot helmet', 'hoodie red', 'hoodie blue', 'hoodie green', 'hoodie yellow', 'hoodie orange', 'hoodie purple', 'hoodie black', 'hoodie white']),
+    'hat_under': frozenset(['none', 'bandana red', 'bandana blue', 'bandana green', 'beanie red', 'beanie blue', 'beanie black', 'cap red', 'cap blue', 'cap black', 'cap forward red', 'cap forward blue', 'cap forward black', 'headband red', 'headband blue', 'headband green', 'knit red', 'knit blue', 'knit black', 'mesa hat']),
+    'short_hair': frozenset(['none', 'messy black', 'messy brown', 'messy blonde', 'messy red', 'mohawk black', 'mohawk brown', 'mohawk blonde', 'mohawk red', 'mohawk green', 'mohawk purple', 'mohawk pink']),
+    'long_hair': frozenset(['none', 'long hair black', 'long hair yellow']),
+    'shirt': frozenset(['none', 'collared shirt white', 'collared shirt blue', 'collared shirt red', 'collared shirt green', 'hoodie down red', 'hoodie down blue', 'hoodie down green', 'hoodie down black', 'hoodie down orange', 'hoodie down purple']),
+    'chain': frozenset(['none', 'gold chain', 'silver chain']),
+    'watch': frozenset(['none', 'argo', 'oyster', 'sub aqua', 'sub black', 'sub green', 'sub blue']),
+    'beard': frozenset(['none', 'full beard', 'shadow beard']),
+    'smoke': frozenset(['none', 'cig black', 'cig white', 'pipe']),
+}
+
 # OpenAI (for mferfy + custom themes)
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 

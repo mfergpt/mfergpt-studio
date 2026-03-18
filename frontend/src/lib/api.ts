@@ -37,6 +37,17 @@ class StudioAPI {
     return res.blob()
   }
 
+  async renderTraits(traits: Record<string, string>, collection: string = 'og', format: 'gif' | 'png' = 'gif') {
+    const body: Record<string, any> = { traits, format }
+    if (collection && collection !== 'og') body.collection = collection
+    const res = await this.request('/render-traits', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    return res.blob()
+  }
+
   async identify(file: File) {
     const form = new FormData()
     form.append('file', file)

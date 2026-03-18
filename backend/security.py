@@ -12,7 +12,7 @@ from config import (
     JWT_SECRET, JWT_ALGORITHM, JWT_EXPIRY_HOURS,
     NONCE_EXPIRY_SECONDS, MFERGPT_TOKEN, TOKEN_GATE_USD, BASE_RPC,
     MAX_MFER_ID, MAX_PROMPT_LENGTH, ALLOWED_THEMES, ALLOWED_WORLDS, MAX_SCENE_MFERS,
-    ALLOWED_COLLECTIONS,
+    ALLOWED_COLLECTIONS, ALLOWED_TRAIT_VALUES,
 )
 
 # --- Nonce store (in-memory, short-lived) ---
@@ -164,6 +164,21 @@ def validate_collection(collection: str) -> str:
     if collection not in ALLOWED_COLLECTIONS:
         raise HTTPException(status_code=400, detail=f"unknown collection: {collection}")
     return collection
+
+def validate_traits(traits: dict[str, str]) -> dict[str, str]:
+    """Validate all trait values against whitelist."""
+    validated = {}
+    for category, value in traits.items():
+        if category not in ALLOWED_TRAIT_VALUES:
+            raise HTTPException(status_code=400, detail=f"unknown trait category: {category}")
+        value = value.strip().lower()
+        if value == 'none':
+            validated[category] = 'none'
+            continue
+        if value not in ALLOWED_TRAIT_VALUES[category]:
+            raise HTTPException(status_code=400, detail=f"invalid value for {category}: {value}")
+        validated[category] = value
+    return validated
 
 def validate_username(username: str) -> str:
     """Twitter username — alphanumeric + underscore only."""
