@@ -353,7 +353,7 @@ export default function MferCreator() {
       } else if (key === 'eyes') {
         // Exclude special eyes from random (zombie, alien — those get forced by type rules)
         const normalEyes = files.filter((f: string) => !['zombie', 'alien'].some(s => f.toLowerCase().includes(s)))
-        t[key] = Math.random() < 0.2 ? 'none' : pick(normalEyes.length ? normalEyes : files)
+        t[key] = pick(normalEyes.length ? normalEyes : files) // eyes always required
       } else {
         // Optional traits: 20% chance (matches avatar-maker's 80% skip rate)
         t[key] = Math.random() < 0.8 ? 'none' : pick(files)
