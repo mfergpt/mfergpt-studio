@@ -41,7 +41,7 @@ export type Theme = typeof THEMES[number]
 
 export const COLLECTIONS = [
   'og', '3d', 'creyzies', 'eos', 'fineart', 'mfersahead',
-  'mfersbehind', 'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs', 'tinydinos'
+  'mfersbehind', 'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs'
 ] as const
 
 // Collections available for theme rendering (no 3d — needs full composed image)

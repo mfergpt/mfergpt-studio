@@ -62,7 +62,6 @@ ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:5555",
     "http://192.168.50.206:8080",
-    "http://192.168.50.206:5173",
 ]
 
 # Allowed trait values for mfer creator — WHITELIST only
@@ -91,7 +90,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 # Allowed derivative collections for mfer_gen
 ALLOWED_COLLECTIONS = frozenset([
     '3d', 'creyzies', 'eos', 'fineart', 'mfersahead', 'mfersbehind',
-    'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs', 'tinydinos'
+    'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs'
 ])
 
 # 3D mfer CDN

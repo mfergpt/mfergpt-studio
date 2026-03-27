@@ -135,7 +135,7 @@ const DERIVATIVE_DIR_MAP: Record<string, string> = {
   creyzies: 'creyzies', eos: 'eos', fineart: 'fineArtMfers',
   mfersahead: 'mfersAhead', mfersbehind: 'mfersBehind',
   sketchy: 'sketchyMfers', somfers: 'somfers', mfpurrs: 'mfpurrs',
-  extended: 'extended', tinydinos: 'tinyDinos',
+  extended: 'extended',
 }
 
 // Build the URL for a layer PNG
@@ -321,7 +321,6 @@ export default function MferCreator() {
         // Layer missing — skip silently
       }
     }
-
   }, [traits, collection, keyToFolder, missingCategories, traitMap])
 
   useEffect(() => {
