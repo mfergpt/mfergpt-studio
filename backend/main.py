@@ -36,6 +36,8 @@ DERIVATIVE_DIR_MAP = {
     "somfers": "somfers",
     "mfpurrs": "mfpurrs",
     "3d": "3d",
+    "mpher": "mpher",
+    "tinydinos": "tinyDinos",
 }
 
 # Rate limiter

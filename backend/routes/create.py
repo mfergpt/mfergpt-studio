@@ -31,6 +31,7 @@ async def get_trait_map(collection: str):
         'creyzies': 'creyzies', 'eos': 'eos', 'fineart': 'fineArtMfers',
         'mfersahead': 'mfersAhead', 'mfersbehind': 'mfersBehind',
         'sketchy': 'sketchyMfers', 'somfers': 'somfers', 'mfpurrs': 'mfpurrs',
+        'tinydinos': 'tinyDinos',
     }
 
     key = coll_key_map.get(collection)
