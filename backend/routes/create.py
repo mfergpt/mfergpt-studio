@@ -380,14 +380,7 @@ def _render_direct(layer_dict: dict[str, str], collection: str | None,
 
     try:
         if theme and theme != 'original':
-            # For derivative collections: composite the base from collection layers first,
-            # then apply the theme effect on top of that base image
-            if collection and collection not in ('og', 'extended', None):
-                from mfer_gen.renderers.derivative_composer import _render_collection
-                return _render_collection(collection, layer_dict, output_path,
-                                          animated=animated, anim_size=500, theme_override=theme)
-
-            # OG themed render — needs legacy traits dict for resolve_colors
+            # Themed render — needs legacy traits dict for resolve_colors
             renderer = get_renderer(theme)
             legacy_traits = _layer_dict_to_legacy_traits(layer_dict)
             # Also pass raw layer names so _build_layer_traits can use new-format fields
