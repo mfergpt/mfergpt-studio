@@ -280,9 +280,21 @@ def _creator_traits_to_layer_dict(traits: dict[str, str], collection: str | None
         '4_20 watch': '4_20 watch',
         'beard': 'beard',
         'smoke': 'smoke',
-        # Derivative-specific folder names (pass through as-is)
-        'clothing': 'clothing',
+        # Derivative-specific: map native keys → OG layer folder names
+        # (symlinks in derivative dirs handle the actual file lookup)
+        'clothing': 'shirt',
         'fur': 'type',
+        'eyewear': 'eyes',
+        'eye_color': 'eye_color',
+        'piercing': 'piercing',
+        # TinyDinos native → OG equivalents (symlinks: type→body, shirt→chest, etc.)
+        'body': 'type',
+        'chest': 'shirt',
+        'spikes': 'short hair',
+        'face': 'mouth',
+        'head': 'hat over headphones',
+        'hands': 'smoke',
+        'feet': '4_20 watch',
     }
 
     layer_dict = {}
@@ -308,14 +320,13 @@ def _layer_dict_to_legacy_traits(layer_dict: dict[str, str]) -> dict[str, str]:
         legacy['bg'] = bg
 
     # Type: 'plain mfer' → 'plain', 'charcoal mfer' → 'charcoal'
+    # Don't default to 'plain' — derivative types (e.g. dino 'red') should pass through
     t = layer_dict.get('type')
     if t:
         for short in ('plain', 'charcoal', 'ape', 'alien', 'zombie'):
             if short in t.lower():
                 legacy['type'] = short
                 break
-        else:
-            legacy['type'] = 'plain'  # default for derivative types
 
     # Headphones: 'red headphones' → 'red'
     hp = layer_dict.get('headphones')
@@ -326,8 +337,12 @@ def _layer_dict_to_legacy_traits(layer_dict: dict[str, str]) -> dict[str, str]:
         else:
             legacy['headphones'] = hp
 
-    legacy['eyes'] = layer_dict.get('eyes', 'normal')
-    legacy['mouth'] = layer_dict.get('mouth', 'flat')
+    eyes = layer_dict.get('eyes')
+    if eyes:
+        legacy['eyes'] = eyes
+    mouth = layer_dict.get('mouth')
+    if mouth:
+        legacy['mouth'] = mouth
 
     smoke = layer_dict.get('smoke')
     if smoke:
@@ -350,6 +365,44 @@ def _layer_dict_to_legacy_traits(layer_dict: dict[str, str]) -> dict[str, str]:
         legacy['beard'] = 'full' if 'full' in beard.lower() else 'shadow'
 
     return legacy
+
+
+# Collections with non-mfer anatomy — theme renderers can't reconstruct these
+# from scratch, so we compose the original PNG first then apply the theme via CLI.
+# Collections with traits that have no OG equivalents (eye_color, piercing)
+# and can't fully go through the standard themed render pipeline.
+_NON_STANDARD_ANATOMY = {'mfpurrs'}
+
+
+def _compose_original(layer_dict: dict[str, str], find_layer) -> 'Image.Image | None':
+    """Compose a PNG from raw layer files. Returns PIL Image or None."""
+    from mfer_gen.renderers.png_composer import LAYER_ORDER
+    from PIL import Image
+
+    canvas = None
+    all_layers = list(LAYER_ORDER)
+    for layer_name in layer_dict:
+        if layer_name not in all_layers:
+            all_layers.append(layer_name)
+
+    for layer_name in all_layers:
+        value = layer_dict.get(layer_name)
+        if not value or value == 'none':
+            continue
+        layer_file = find_layer(layer_name, value)
+        if not layer_file:
+            continue
+        layer_img = Image.open(layer_file).convert("RGBA")
+        if canvas is None:
+            canvas = layer_img.copy()
+        else:
+            if layer_img.size != canvas.size:
+                layer_img = layer_img.resize(canvas.size, Image.LANCZOS)
+            canvas = Image.alpha_composite(canvas, layer_img)
+
+    if canvas and canvas.size[0] != 1000:
+        canvas = canvas.resize((1000, 1000), Image.LANCZOS)
+    return canvas
 
 
 def _render_direct(layer_dict: dict[str, str], collection: str | None,
@@ -378,57 +431,181 @@ def _render_direct(layer_dict: dict[str, str], collection: str | None,
         set_active_collection(collection)
 
     try:
-        if theme and theme != 'original':
-            # Themed render — needs legacy traits dict for resolve_colors
+        is_non_standard = collection in _NON_STANDARD_ANATOMY
+
+        if theme and theme != 'original' and is_non_standard:
+            # Non-mfer anatomy + theme: compose original PNG first,
+            # then apply theme via CLI --from-image (theme renderers
+            # can't reconstruct non-mfer anatomy from scratch).
+            canvas = _compose_original(layer_dict, find_layer)
+            if canvas is None:
+                canvas = Image.new("RGBA", (1000, 1000), "#87CEEB")
+            return _apply_theme_to_image(canvas, theme, output_path, animated)
+
+        elif theme and theme != 'original':
+            # Standard mfer anatomy — themed render via Python API
             renderer = get_renderer(theme)
             legacy_traits = _layer_dict_to_legacy_traits(layer_dict)
-            # Also pass raw layer names so _build_layer_traits can use new-format fields
+            # Raw layer values override legacy — derivatives send actual filenames
+            # which find_layer needs to locate the right PNGs
             for k, v in layer_dict.items():
                 key = k.replace(' ', '_')
-                if key not in legacy_traits:
-                    legacy_traits[key] = v
+                legacy_traits[key] = v
             colors = resolve_colors(legacy_traits)
             positions = get_position_map(renderer.default_positions)
             return renderer.render(legacy_traits, colors, positions, output_path, animated=animated, anim_size=500)
         else:
             # Original PNG compositor — render directly from layer files
-            canvas = None
-            # For derivatives, also check collection-specific folder names
-            all_layers = list(LAYER_ORDER)
-            # Add any non-standard layer categories from the traits
-            for layer_name in layer_dict:
-                if layer_name not in all_layers:
-                    all_layers.append(layer_name)
-
-            for layer_name in all_layers:
-                value = layer_dict.get(layer_name)
-                if not value or value == 'none':
-                    continue
-
-                layer_file = find_layer(layer_name, value)
-                if not layer_file:
-                    continue
-
-                layer_img = Image.open(layer_file).convert("RGBA")
-                if canvas is None:
-                    canvas = layer_img.copy()
-                else:
-                    if layer_img.size != canvas.size:
-                        layer_img = layer_img.resize(canvas.size, Image.LANCZOS)
-                    canvas = Image.alpha_composite(canvas, layer_img)
-
+            canvas = _compose_original(layer_dict, find_layer)
             if canvas is None:
                 canvas = Image.new("RGBA", (1000, 1000), "#87CEEB")
-
-            # Normalize to 1000x1000
-            if canvas.size[0] != 1000:
-                canvas = canvas.resize((1000, 1000), Image.LANCZOS)
-
             canvas.save(output_path, "PNG")
             return output_path
     finally:
         # Restore previous collection state
         set_active_collection(prev_collection)
+
+
+def _styled_frame(original: 'Image.Image', theme: str, t: float) -> 'Image.Image':
+    """Render one frame of a themed image. t is 0.0–1.0 progress through the animation cycle."""
+    from PIL import Image, ImageFilter, ImageEnhance, ImageOps, ImageChops
+    import math
+
+    img = original.copy()
+    # Oscillating value: 0→1→0 over the cycle
+    pulse = 0.5 + 0.5 * math.sin(2 * math.pi * t)
+    # Secondary offset wave
+    pulse2 = 0.5 + 0.5 * math.sin(2 * math.pi * t + math.pi / 3)
+
+    if theme in ('noir', 'sketch', 'chalk', 'newspaper', 'sumi_e', 'woodcut', 'banksy'):
+        gray = ImageOps.grayscale(img.convert("RGB"))
+        if theme == 'sketch':
+            gray = gray.filter(ImageFilter.FIND_EDGES)
+        elif theme == 'chalk':
+            gray = ImageOps.invert(gray)
+        elif theme == 'woodcut':
+            thresh = int(100 + 56 * pulse)  # animated threshold
+            gray = gray.point(lambda p: 255 if p > thresh else 0)
+        # Blend: original → grayscale themed, with brightness pulse
+        themed = gray.convert("RGB")
+        bright = ImageEnhance.Brightness(themed).enhance(0.8 + 0.4 * pulse)
+        return bright
+
+    elif theme in ('neon', 'cyberpunk', 'hologram', 'radioactive', 'matrix_rain'):
+        edges = img.convert("RGB").filter(ImageFilter.FIND_EDGES)
+        # Glow intensity pulses
+        bright = ImageEnhance.Brightness(edges).enhance(1.0 + 2.0 * pulse)
+        color = ImageEnhance.Color(bright).enhance(2.0 + 3.0 * pulse2)
+        # Tint per theme
+        tints = {'neon': (255,0,255), 'cyberpunk': (255,0,100), 'hologram': (100,200,255),
+                 'radioactive': (0,255,50), 'matrix_rain': (0,255,65)}
+        r, g, b = tints.get(theme, (255,255,255))
+        a = int(40 + 60 * pulse)
+        overlay = Image.new("RGBA", img.size, (r, g, b, a))
+        return Image.alpha_composite(color.convert("RGBA"), overlay).convert("RGB")
+
+    elif theme in ('pixel', 'lego', 'mosaic', 'cross_stitch'):
+        # Animate block size
+        base_block = 10 if theme == 'pixel' else 14 if theme == 'lego' else 8
+        block = max(4, int(base_block + 10 * pulse))
+        small = img.resize((img.width // block, img.height // block), Image.NEAREST)
+        return small.resize(img.size, Image.NEAREST).convert("RGB")
+
+    elif theme in ('gold', 'chrome', 'diamond'):
+        gray = ImageOps.grayscale(img.convert("RGB"))
+        shine = 0.7 + 0.6 * pulse  # animated shine
+        if theme == 'gold':
+            r = gray.point(lambda p: min(255, int(p * shine * 1.3)))
+            g = gray.point(lambda p: min(255, int(p * shine * 0.95)))
+            b = gray.point(lambda p: int(p * 0.2))
+        elif theme == 'chrome':
+            v = gray.point(lambda p: min(255, int(p * shine)))
+            r = g = b = v
+        else:
+            r = gray.point(lambda p: min(255, int(p * 0.6 + 100 * pulse)))
+            g = gray.point(lambda p: min(255, int(p * 0.7 + 100 * pulse)))
+            b = gray.point(lambda p: min(255, int(p * 0.9 + 60 * pulse)))
+        return ImageEnhance.Contrast(Image.merge("RGB", (r, g, b))).enhance(1.3 + 0.4 * pulse2)
+
+    elif theme in ('thermal', 'infrared', 'xray'):
+        gray = ImageOps.grayscale(img.convert("RGB"))
+        if theme == 'xray':
+            inv = ImageOps.invert(gray)
+            return ImageEnhance.Brightness(inv.convert("RGB")).enhance(0.8 + 0.4 * pulse)
+        # Animated heat shift
+        shift = int(40 * pulse)
+        r = gray.point(lambda p: min(255, max(0, p * 2 + shift)))
+        g = gray.point(lambda p: max(0, 255 - abs(p - 128 + shift) * 4))
+        b = gray.point(lambda p: max(0, 255 - p * 2 + shift))
+        return Image.merge("RGB", (r, g, b))
+
+    elif theme in ('acid', 'vapor', 'pop'):
+        sat = 1.5 + 3.0 * pulse  # 1.5→4.5 saturation cycle
+        con = 1.0 + 1.0 * pulse2
+        out = ImageEnhance.Color(img.convert("RGB")).enhance(sat)
+        return ImageEnhance.Contrast(out).enhance(con)
+
+    elif theme in ('glitch', 'retro_tv'):
+        r, g, b = img.convert("RGB").split()
+        offset = int(3 + 12 * pulse)
+        r = ImageChops.offset(r, offset, int(2 * pulse2))
+        b = ImageChops.offset(b, -offset, -int(2 * pulse2))
+        return Image.merge("RGB", (r, g, b))
+
+    elif theme in ('frost', 'underwater'):
+        desat = ImageEnhance.Color(img.convert("RGB")).enhance(0.3 + 0.4 * pulse)
+        tint = (100, 180, 255) if theme == 'frost' else (0, 80, 160)
+        a = int(30 + 50 * pulse)
+        overlay = Image.new("RGBA", img.size, (*tint, a))
+        return Image.alpha_composite(desat.convert("RGBA"), overlay).convert("RGB")
+
+    elif theme in ('ember', 'sunset'):
+        tint = (255, 80, 0) if theme == 'ember' else (255, 140, 50)
+        a = int(30 + 70 * pulse)
+        overlay = Image.new("RGBA", img.size, (*tint, a))
+        out = Image.alpha_composite(img.convert("RGBA"), overlay)
+        return ImageEnhance.Contrast(out.convert("RGB")).enhance(1.0 + 0.6 * pulse2)
+
+    elif theme in ('negative',):
+        inv = ImageOps.invert(img.convert("RGB"))
+        return Image.blend(img.convert("RGB"), inv, pulse)
+
+    elif theme in ('comic', 'graffiti', 'tattoo', 'traced', 'oil_paint', 'watercolor', 'hand_drawn'):
+        edged = img.convert("RGB").filter(ImageFilter.EDGE_ENHANCE_MORE)
+        smoothed = img.convert("RGB").filter(ImageFilter.SMOOTH_MORE)
+        blended = Image.blend(smoothed, edged, 0.3 + 0.7 * pulse)
+        return ImageEnhance.Contrast(blended).enhance(1.0 + 0.8 * pulse2)
+
+    else:
+        sat = 1.0 + 1.5 * pulse
+        con = 1.0 + 0.5 * pulse2
+        out = ImageEnhance.Color(img.convert("RGB")).enhance(sat)
+        return ImageEnhance.Contrast(out).enhance(con)
+
+
+def _apply_theme_to_image(image: 'Image.Image', theme: str, output_path: str, animated: bool = False) -> str:
+    """Apply a theme effect to a composed PIL Image (static or animated)."""
+    from PIL import Image
+
+    if not animated:
+        frame = _styled_frame(image, theme, 0.25)
+        frame.save(output_path, "PNG")
+        return output_path
+
+    # Animated GIF: render frames at different points in the animation cycle
+    num_frames = 16
+    size = 500
+    frames = []
+    for i in range(num_frames):
+        t = i / num_frames
+        frame = _styled_frame(image, theme, t)
+        frame = frame.resize((size, size), Image.LANCZOS)
+        frames.append(frame)
+
+    gif_path = output_path.rsplit('.', 1)[0] + '.gif'
+    frames[0].save(gif_path, save_all=True, append_images=frames[1:],
+                   duration=100, loop=0, optimize=True)
+    return gif_path
 
 
 @router.post("/render-traits")

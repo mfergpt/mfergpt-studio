@@ -166,40 +166,50 @@ def validate_collection(collection: str) -> str:
     return collection
 
 def validate_traits(traits: dict[str, str]) -> dict[str, str]:
-    """Validate all trait values against whitelist (case-insensitive)."""
+    """Validate all trait values against whitelist (case-insensitive).
+
+    For OG categories, checks against ALLOWED_TRAIT_VALUES.
+    For derivative-specific categories (fur, clothing, body, spikes, etc.),
+    passes through if the value looks safe (alphanumeric + basic punctuation).
+    """
     validated = {}
     for category, value in traits.items():
-        if category not in ALLOWED_TRAIT_VALUES:
-            raise HTTPException(status_code=400, detail=f"unknown trait category: {category}")
         value = value.strip()
         if value.lower() == 'none' or value == '':
             validated[category] = 'none'
             continue
-        # Case-insensitive match — find the canonical form from the whitelist
-        allowed = ALLOWED_TRAIT_VALUES[category]
-        val_lower = value.lower()
-        match = None
-        for allowed_val in allowed:
-            if allowed_val.lower() == val_lower:
-                match = allowed_val
-                break
-        # Also try with .png stripped (creator may pass filenames)
-        if not match and val_lower.endswith('.png'):
-            val_no_ext = val_lower[:-4]
+
+        if category in ALLOWED_TRAIT_VALUES:
+            # OG category — check against whitelist
+            allowed = ALLOWED_TRAIT_VALUES[category]
+            val_lower = value.lower()
+            match = None
             for allowed_val in allowed:
-                if allowed_val.lower() == val_no_ext:
+                if allowed_val.lower() == val_lower:
                     match = allowed_val
                     break
-        if not match:
-            # Be lenient — pass through if it looks safe, skip if not
-            import re
-            if re.match(r'^[a-zA-Z0-9 _/()$\-\.]+$', value) and len(value) < 50:
-                match = value
+            # Also try with .png stripped (creator may pass filenames)
+            if not match and val_lower.endswith('.png'):
+                val_no_ext = val_lower[:-4]
+                for allowed_val in allowed:
+                    if allowed_val.lower() == val_no_ext:
+                        match = allowed_val
+                        break
+            if not match:
+                # Be lenient — pass through if it looks safe, skip if not
+                if re.match(r'^[a-zA-Z0-9 _/()$\-\.#]+$', value) and len(value) < 50:
+                    match = value
+                else:
+                    validated[category] = 'none'
+                    continue
+            validated[category] = match
+        else:
+            # Derivative-specific category (fur, clothing, body, spikes, etc.)
+            # Sanitize: allow alphanumeric, spaces, underscores, hyphens, dots, #
+            if re.match(r'^[a-zA-Z0-9 _/()$\-\.#]+$', value) and len(value) < 50:
+                validated[category] = value
             else:
-                # Skip unrecognized values instead of crashing
                 validated[category] = 'none'
-                continue
-        validated[category] = match
     return validated
 
 def validate_username(username: str) -> str:

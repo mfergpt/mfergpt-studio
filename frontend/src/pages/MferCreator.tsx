@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react'
 import { COLLECTIONS } from '../lib/wagmi'
+import { getCollectionTraits, getCollectionInfo, type TraitDef } from '../lib/collections'
 import type { ThreePreviewHandle } from '../components/ThreePreview'
 import { TRAIT_MESH_MAPPING } from '../components/traitMeshMapping'
 
@@ -11,71 +12,24 @@ const CATEGORY_3D_REVERSE: Record<string, string> = {
   hat_under_headphones: 'hat_under',
 }
 
-// Build 3D layer options from TRAIT_MESH_MAPPING keys
-function build3DLayerOptions(): Record<string, string[]> {
+// Build 3D layer options from TRAIT_MESH_MAPPING keys using given trait defs
+function build3DLayerOptions(traitDefs: TraitDef[]): Record<string, string[]> {
   const options: Record<string, string[]> = {}
-  for (const { key } of CATEGORIES) {
-    const meshKey = key === 'hat_over' ? 'hat_over_headphones'
-      : key === 'hat_under' ? 'hat_under_headphones'
-      : key
+  for (const t of traitDefs) {
+    const meshKey = t.key === 'hat_over' ? 'hat_over_headphones'
+      : t.key === 'hat_under' ? 'hat_under_headphones'
+      : t.key
     const mapping = TRAIT_MESH_MAPPING[meshKey]
     if (mapping) {
-      options[key] = Object.keys(mapping)
-    } else if (key === 'background') {
-      options[key] = ['blue', 'red', 'green', 'yellow', 'orange', 'purple', 'turquoise', 'space', 'tree', 'graveyard']
+      options[t.key] = Object.keys(mapping)
+    } else if (t.key === 'background') {
+      options[t.key] = ['blue', 'red', 'green', 'yellow', 'orange', 'purple', 'turquoise', 'space', 'tree', 'graveyard']
     } else {
-      options[key] = []
+      options[t.key] = []
     }
   }
   return options
 }
-
-// --- Constants ---
-
-// Layer z-order (bottom to top) — keys used in traits state
-const LAYER_ORDER = [
-  'background', 'type', 'shirt', 'chain', 'watch', 'beard',
-  'eyes', 'short_hair', 'long_hair', 'hat_under', 'headphones',
-  'hat_over', 'mouth', 'smoke',
-] as const
-
-type TraitKey = typeof LAYER_ORDER[number]
-
-// Map trait keys → actual folder names on disk (OG collection)
-const FOLDER_MAP: Record<string, string> = {
-  background: 'background',
-  type: 'type',
-  eyes: 'eyes',
-  mouth: 'mouth',
-  headphones: 'headphones',
-  hat_over: 'hat over headphones',
-  hat_under: 'hat under headphones',
-  short_hair: 'short hair',
-  long_hair: 'long hair',
-  shirt: 'shirt',
-  chain: 'chain',
-  watch: '4_20 watch',
-  beard: 'beard',
-  smoke: 'smoke',
-}
-
-// Display labels for UI tabs
-const CATEGORIES: { key: TraitKey; label: string }[] = [
-  { key: 'background', label: 'background' },
-  { key: 'type', label: 'type' },
-  { key: 'eyes', label: 'eyes' },
-  { key: 'mouth', label: 'mouth' },
-  { key: 'headphones', label: 'headphones' },
-  { key: 'hat_over', label: 'hat (over)' },
-  { key: 'hat_under', label: 'hat (under)' },
-  { key: 'short_hair', label: 'short hair' },
-  { key: 'long_hair', label: 'long hair' },
-  { key: 'shirt', label: 'shirt' },
-  { key: 'chain', label: 'chain' },
-  { key: 'watch', label: 'watch' },
-  { key: 'beard', label: 'beard' },
-  { key: 'smoke', label: 'smoke' },
-]
 
 // --- Save/Load ---
 
@@ -108,12 +62,6 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function getDefaultTraits(): Record<string, string> {
-  const traits: Record<string, string> = {}
-  for (const { key } of CATEGORIES) traits[key] = 'none'
-  return traits
-}
-
 // --- Image cache ---
 
 const imageCache = new Map<string, HTMLImageElement>()
@@ -135,7 +83,7 @@ const DERIVATIVE_DIR_MAP: Record<string, string> = {
   creyzies: 'creyzies', eos: 'eos', fineart: 'fineArtMfers',
   mfersahead: 'mfersAhead', mfersbehind: 'mfersBehind',
   sketchy: 'sketchyMfers', somfers: 'somfers', mfpurrs: 'mfpurrs',
-  extended: 'extended',
+  tinydinos: 'tinyDinos', extended: 'extended',
 }
 
 // Build the URL for a layer PNG
@@ -147,80 +95,50 @@ function layerUrl(collection: string, folderName: string, fileName: string): str
   return `/layers/derivatives/${encodeURIComponent(dir)}/${encodeURIComponent(folderName)}/${encodeURIComponent(fileName)}`
 }
 
-// Resolve an OG trait filename to the derivative filename using the trait map.
-// Returns the mapped filename (with .png), or null if the trait is unavailable.
-function resolveTraitFile(
-  traitMap: Record<string, Record<string, string | null>>,
-  folderName: string,
-  ogFileName: string,
-): string | null {
-  const categoryMap = traitMap[folderName]
-  if (!categoryMap) return ogFileName // no mapping for this folder — use as-is
-  const ogName = ogFileName.replace(/\.png$/i, '')
-  const mapped = categoryMap[ogName]
-  if (mapped === undefined) return ogFileName // not in map — try as-is
-  if (mapped === null) return null // explicitly unavailable
-  return mapped + '.png'
-}
-
 // --- Types for layer data ---
 
 // API returns { "folder name": ["file1.png", "file2.png", ...] }
 type LayerData = Record<string, string[]>
-
-// Reverse map: from folder name back to trait key
-function buildFolderToKey(layerData: LayerData): Record<string, TraitKey> {
-  const result: Record<string, TraitKey> = {}
-  // First, try exact matches from FOLDER_MAP
-  for (const [key, folder] of Object.entries(FOLDER_MAP)) {
-    if (layerData[folder]) result[folder] = key as TraitKey
-  }
-  // For derivatives with different folder names, map by similarity
-  for (const folder of Object.keys(layerData)) {
-    if (result[folder]) continue
-    const lower = folder.toLowerCase().replace(/[_\s-]+/g, '')
-    for (const [key, ogFolder] of Object.entries(FOLDER_MAP)) {
-      const ogLower = ogFolder.toLowerCase().replace(/[_\s-]+/g, '')
-      if (lower === ogLower || lower.includes(ogLower) || ogLower.includes(lower)) {
-        result[folder] = key as TraitKey
-        break
-      }
-    }
-  }
-  return result
-}
 
 // --- Component ---
 
 export default function MferCreator() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const threeRef = useRef<ThreePreviewHandle>(null)
-  const [traits, setTraits] = useState<Record<string, string>>(getDefaultTraits())
   const [collection, setCollection] = useState<string>('og')
+  const [traits, setTraits] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState<SavedMfer[]>(loadSaved())
   const [saveName, setSaveName] = useState('')
   const [showSaved, setShowSaved] = useState(false)
-  const [activeTab, setActiveTab] = useState<TraitKey>('background')
+  const [activeTab, setActiveTab] = useState<string>('background')
 
-  // Layer data from API: trait key → list of filenames
+  // Layer data from API: folder name → list of filenames
+  const [layerData, setLayerData] = useState<LayerData>({})
+  // Resolved layer options keyed by trait key
   const [layerOptions, setLayerOptions] = useState<Record<string, string[]>>({})
-  // Folder name mapping for current collection
-  const [keyToFolder, setKeyToFolder] = useState<Record<string, string>>(FOLDER_MAP)
   const [loading, setLoading] = useState(true)
-  // Track which categories are missing in current collection
-  const [missingCategories, setMissingCategories] = useState<Set<string>>(new Set())
-  // Trait map: OG→derivative filename mapping (fetched per collection)
-  const [traitMap, setTraitMap] = useState<Record<string, Record<string, string | null>>>({})
 
-  // Fetch layers and trait map when collection changes
+  // Current trait definitions (dynamic per collection)
+  const [traitDefs, setTraitDefs] = useState<TraitDef[]>(() => getCollectionTraits('og'))
+
+  // Collection info for attribution
+  const collectionInfo = useMemo(() => getCollectionInfo(collection), [collection])
+
+  // Build default traits (all 'none') from current trait defs
+  const getDefaultTraits = useCallback((defs: TraitDef[]) => {
+    const t: Record<string, string> = {}
+    for (const d of defs) t[d.key] = 'none'
+    return t
+  }, [])
+
+  // Fetch layers when collection changes, then resolve trait defs
   useEffect(() => {
-    // 3D collection: build options from TRAIT_MESH_MAPPING, no API call
     if (collection === '3d') {
-      const options = build3DLayerOptions()
+      const defs = getCollectionTraits('3d')
+      setTraitDefs(defs)
+      const options = build3DLayerOptions(defs)
       setLayerOptions(options)
-      setKeyToFolder(FOLDER_MAP)
-      setTraitMap({})
-      setMissingCategories(new Set())
+      setLayerData({})
       setLoading(false)
       return
     }
@@ -228,45 +146,23 @@ export default function MferCreator() {
     let cancelled = false
     setLoading(true)
 
-    const layersPromise = fetch(`/api/layers/${collection}`).then(r => r.json())
-    const mapPromise = collection !== 'og'
-      ? fetch(`/api/trait-map/${collection}`).then(r => r.json()).catch(() => ({}))
-      : Promise.resolve({})
-
-    Promise.all([layersPromise, mapPromise])
-      .then(([data, map]: [LayerData, Record<string, Record<string, string | null>>]) => {
+    fetch(`/api/layers/${collection}`)
+      .then(r => r.json())
+      .then((data: LayerData) => {
         if (cancelled) return
-        setTraitMap(map)
+        setLayerData(data)
 
-        const folderToKey = buildFolderToKey(data)
+        // Resolve trait definitions: config override or auto-discover
+        const defs = getCollectionTraits(collection, data)
+
+        // Build layerOptions keyed by trait key, matching folders from API data
         const options: Record<string, string[]> = {}
-        const k2f: Record<string, string> = {}
-        const missing = new Set<string>()
-
-        for (const { key } of CATEGORIES) {
-          // Find folder for this key
-          let folder: string | undefined
-          // Check direct FOLDER_MAP first
-          if (data[FOLDER_MAP[key]]) {
-            folder = FOLDER_MAP[key]
-          } else {
-            // Check reverse map
-            for (const [f, k] of Object.entries(folderToKey)) {
-              if (k === key) { folder = f; break }
-            }
-          }
-          if (folder && data[folder]) {
-            options[key] = data[folder]
-            k2f[key] = folder
-          } else {
-            options[key] = []
-            k2f[key] = FOLDER_MAP[key]
-            missing.add(key)
-          }
+        for (const def of defs) {
+          options[def.key] = data[def.folder] || []
         }
+
+        setTraitDefs(defs)
         setLayerOptions(options)
-        setKeyToFolder(k2f)
-        setMissingCategories(missing)
         setLoading(false)
       })
       .catch(() => {
@@ -275,17 +171,13 @@ export default function MferCreator() {
     return () => { cancelled = true }
   }, [collection])
 
-  // Auto-generate a random mfer on first load or when collection changes (if traits are all 'none')
-  const initialRandomDone = useRef(false)
+  // Reset traits and randomize when collection changes (traitDefs update)
   useEffect(() => {
-    if (!loading && Object.keys(layerOptions).length > 0) {
-      const allNone = Object.values(traits).every(v => v === 'none')
-      if (allNone || !initialRandomDone.current) {
-        initialRandomDone.current = true
-        handleRandom()
-      }
+    if (!loading && traitDefs.length > 0) {
+      setActiveTab(traitDefs[0].key)
+      handleRandom()
     }
-  }, [loading, layerOptions])
+  }, [loading, traitDefs])
 
   // Composite canvas whenever traits or collection change (2D only)
   const compositeCanvas = useCallback(async () => {
@@ -297,23 +189,12 @@ export default function MferCreator() {
 
     ctx.clearRect(0, 0, 1000, 1000)
 
-    for (const key of LAYER_ORDER) {
-      const value = traits[key]
+    // Draw layers in trait def order (bottom to top)
+    for (const def of traitDefs) {
+      const value = traits[def.key]
       if (value === 'none' || !value) continue
-      if (missingCategories.has(key)) continue
 
-      const folder = keyToFolder[key]
-      if (!folder) continue
-
-      // For derivative collections, resolve OG filename → derivative filename
-      let fileName = value
-      if (collection !== 'og' && Object.keys(traitMap).length > 0) {
-        const resolved = resolveTraitFile(traitMap, folder, value)
-        if (resolved === null) continue // trait unavailable in this collection
-        fileName = resolved
-      }
-
-      const src = layerUrl(collection, folder, fileName)
+      const src = layerUrl(collection, def.folder, value)
       try {
         const img = await loadImage(src)
         ctx.drawImage(img, 0, 0, 1000, 1000)
@@ -321,7 +202,7 @@ export default function MferCreator() {
         // Layer missing — skip silently
       }
     }
-  }, [traits, collection, keyToFolder, missingCategories, traitMap])
+  }, [traits, collection, traitDefs])
 
   useEffect(() => {
     compositeCanvas()
@@ -329,133 +210,135 @@ export default function MferCreator() {
 
   // --- Handlers ---
 
-  const setTrait = (category: string, value: string) => {
-    setTraits(prev => ({ ...prev, [category]: value }))
+  const setTrait = (key: string, value: string) => {
+    setTraits(prev => ({ ...prev, [key]: value }))
   }
 
   const handleRandom = () => {
-    const options = layerOptions
-    const t = getDefaultTraits()
+    const t = getDefaultTraits(traitDefs)
+    const lo = (s: string) => s.toLowerCase()
 
-    for (const { key } of CATEGORIES) {
-      const files = options[key] || []
+    for (const def of traitDefs) {
+      const files = layerOptions[def.key] || []
       if (files.length === 0) continue
-      // Mandatory traits: always picked (matches avatar-maker)
-      const MANDATORY = ['background', 'type', 'eyes', 'mouth', 'headphones']
-      if (MANDATORY.includes(key) && key !== 'type' && key !== 'eyes') {
-        t[key] = pick(files)
-      } else if (key === 'type') {
-        // Weighted type selection (matches avatar-maker)
-        const r = Math.random() * 100
-        const typeKeywords = r < 30 ? 'plain' : r < 60 ? 'charcoal' : r < 74 ? 'zombie' : r < 86 ? 'ape' : 'alien'
-        const matched = files.find((f: string) => f.toLowerCase().includes(typeKeywords))
-        t[key] = matched || pick(files)
-      } else if (key === 'eyes') {
-        // Exclude special eyes from random (zombie, alien — those get forced by type rules)
-        const normalEyes = files.filter((f: string) => !['zombie', 'alien'].some(s => f.toLowerCase().includes(s)))
-        t[key] = pick(normalEyes.length ? normalEyes : files) // eyes always required
+
+      if (def.mandatory) {
+        // Special handling for "type"-like traits (weighted)
+        if (def.key === 'type') {
+          const r = Math.random() * 100
+          const kw = r < 30 ? 'plain' : r < 60 ? 'charcoal' : r < 74 ? 'zombie' : r < 86 ? 'ape' : 'alien'
+          const matched = files.find((f: string) => lo(f).includes(kw))
+          t[def.key] = matched || pick(files)
+        } else if (def.key === 'eyes' || def.key === 'eyewear') {
+          // Exclude special eyes from random
+          const normalEyes = files.filter((f: string) => !['zombie', 'alien'].some(s => lo(f).includes(s)))
+          t[def.key] = pick(normalEyes.length ? normalEyes : files)
+        } else {
+          t[def.key] = pick(files)
+        }
       } else {
-        // Optional traits: 20% chance (matches avatar-maker's 80% skip rate)
-        t[key] = Math.random() < 0.8 ? 'none' : pick(files)
+        // Optional traits: 20% chance
+        t[def.key] = Math.random() < 0.8 ? 'none' : pick(files)
       }
     }
 
-    // Conflict rules — ported from avatar-maker CharacterCreator.js
-    const lo = (s: string) => s.toLowerCase()
+    // Conflict rules (only apply when relevant keys exist)
+    const has = (key: string) => t[key] !== undefined && t[key] !== 'none'
 
-    // Rule 1: hat_over vs hat_under conflict
-    if (t.hat_over !== 'none' && t.hat_under !== 'none') {
+    // hat_over vs hat_under conflict
+    if (has('hat_over') && has('hat_under')) {
       const isHoodieOver = lo(t.hat_over).includes('hoodie')
       const isBandanaUnder = lo(t.hat_under).includes('bandana')
       const isBeanieUnder = lo(t.hat_under).includes('beanie')
-      // Hoodie + beanie = NOT OK
       if (isHoodieOver && isBeanieUnder) {
         t.hat_under = 'none'
-      }
-      // Hoodie + bandana = OK, everything else = conflict
-      else if (!isHoodieOver || (!isBandanaUnder && !isBeanieUnder)) {
+      } else if (!isHoodieOver || (!isBandanaUnder && !isBeanieUnder)) {
         Math.random() > 0.5 ? t.hat_over = 'none' : t.hat_under = 'none'
       }
     }
 
-    // Rule 2: short_hair vs long_hair
-    if (t.short_hair !== 'none' && t.long_hair !== 'none') {
+    // short_hair vs long_hair
+    if (has('short_hair') && has('long_hair')) {
       Math.random() > 0.5 ? t.short_hair = 'none' : t.long_hair = 'none'
     }
 
-    // Rule 3: ape = no long hair (ALWAYS, not just random)
-    if (lo(t.type).includes('ape')) t.long_hair = 'none'
+    // ape = no long hair
+    if (t.type && lo(t.type).includes('ape') && t.long_hair) t.long_hair = 'none'
 
-    // Rule 4: shirt/hoodie vs chain conflict
-    const hasHoodieUp = t.hat_over !== 'none' && lo(t.hat_over).includes('hoodie')
-    const hasShirt = t.shirt !== 'none'
-    const hasChain = t.chain !== 'none'
-    if ((hasShirt || hasHoodieUp) && hasChain) {
-      if (Math.random() > 0.5) {
-        t.chain = 'none'
-      } else {
-        if (hasHoodieUp) t.hat_over = 'none'
-        if (hasShirt) t.shirt = 'none'
+    // shirt/hoodie vs chain
+    if (t.hat_over !== undefined && t.shirt !== undefined && t.chain !== undefined) {
+      const hasHoodieUp = has('hat_over') && lo(t.hat_over).includes('hoodie')
+      const hasShirt = has('shirt')
+      const hasChain = has('chain')
+      if ((hasShirt || hasHoodieUp) && hasChain) {
+        if (Math.random() > 0.5) {
+          t.chain = 'none'
+        } else {
+          if (hasHoodieUp) t.hat_over = 'none'
+          if (hasShirt) t.shirt = 'none'
+        }
+      }
+      // shirt vs hoodie up
+      if (hasShirt && hasHoodieUp) {
+        Math.random() > 0.5 ? t.hat_over = 'none' : t.shirt = 'none'
       }
     }
 
-    // Rule 5: shirt vs hoodie up conflict
-    if (hasShirt && hasHoodieUp) {
-      Math.random() > 0.5 ? t.hat_over = 'none' : t.shirt = 'none'
-    }
-
-    // Rule 6: mohawk/messy hair vs non-hoodie headwear
-    const hasMohawkOrMessy = t.short_hair !== 'none' && (lo(t.short_hair).includes('mohawk') || lo(t.short_hair).includes('messy'))
-    const hasNonHoodieHeadwear = (t.hat_over !== 'none' && !lo(t.hat_over).includes('hoodie')) || t.hat_under !== 'none'
-    if (hasMohawkOrMessy && hasNonHoodieHeadwear) {
-      if (Math.random() > 0.5) {
-        t.short_hair = 'none'
-      } else {
-        if (t.hat_over !== 'none' && !lo(t.hat_over).includes('hoodie')) t.hat_over = 'none'
-        t.hat_under = 'none'
+    // mohawk/messy hair vs headwear
+    if (t.short_hair !== undefined && has('short_hair')) {
+      const hasMohawkOrMessy = lo(t.short_hair).includes('mohawk') || lo(t.short_hair).includes('messy')
+      const hasNonHoodieHeadwear = (has('hat_over') && !lo(t.hat_over).includes('hoodie')) || has('hat_under')
+      if (hasMohawkOrMessy && hasNonHoodieHeadwear) {
+        if (Math.random() > 0.5) {
+          t.short_hair = 'none'
+        } else {
+          if (t.hat_over !== undefined && !lo(t.hat_over).includes('hoodie')) t.hat_over = 'none'
+          if (t.hat_under !== undefined) t.hat_under = 'none'
+        }
       }
     }
 
-    // Rule 7: top hat/pilot/cowboy removes ALL hair
-    const topHeadwear = ['top hat', 'tophat', 'pilot', 'cowboy']
-    if (t.hat_over !== 'none' && topHeadwear.some(h => lo(t.hat_over).includes(h))) {
-      t.short_hair = 'none'
-      t.long_hair = 'none'
-    }
-
-    // Rule 8: hoodie up removes all hair
-    if (t.hat_over !== 'none' && lo(t.hat_over).includes('hoodie')) {
-      t.short_hair = 'none'
-      t.long_hair = 'none'
-    }
-
-    // Rule 9: zombie type → zombie eyes (force if regular)
-    if (lo(t.type).includes('zombie')) {
-      if (t.eyes === 'none' || lo(t.eyes).includes('regular')) {
-        const zombieEyes = (options['eyes'] || []).find((e: string) => lo(e).includes('zombie'))
-        if (zombieEyes) t.eyes = zombieEyes
+    // top hat/pilot/cowboy removes ALL hair
+    if (has('hat_over')) {
+      const topHeadwear = ['top hat', 'tophat', 'pilot', 'cowboy']
+      if (topHeadwear.some(h => lo(t.hat_over).includes(h))) {
+        if (t.short_hair !== undefined) t.short_hair = 'none'
+        if (t.long_hair !== undefined) t.long_hair = 'none'
       }
-    } else if (t.eyes !== 'none' && lo(t.eyes).includes('zombie')) {
-      // Non-zombie type can't have zombie eyes
-      const regularEyes = (options['eyes'] || []).find((e: string) => lo(e).includes('regular'))
-      t.eyes = regularEyes || 'none'
     }
 
-    // Rule 10: alien type → alien eyes (if regular)
-    if (lo(t.type).includes('alien') && (t.eyes === 'none' || lo(t.eyes).includes('regular'))) {
-      const alienEyes = (options['eyes'] || []).find((e: string) => lo(e).includes('alien'))
+    // hoodie up removes all hair
+    if (has('hat_over') && lo(t.hat_over).includes('hoodie')) {
+      if (t.short_hair !== undefined) t.short_hair = 'none'
+      if (t.long_hair !== undefined) t.long_hair = 'none'
+    }
+
+    // zombie type → zombie eyes
+    if (t.type && t.eyes !== undefined) {
+      const eyeFiles = layerOptions['eyes'] || layerOptions['eyewear'] || []
+      if (lo(t.type).includes('zombie')) {
+        if (t.eyes === 'none' || lo(t.eyes).includes('regular')) {
+          const zombieEyes = eyeFiles.find((e: string) => lo(e).includes('zombie'))
+          if (zombieEyes) t.eyes = zombieEyes
+        }
+      } else if (t.eyes !== 'none' && lo(t.eyes).includes('zombie')) {
+        const regularEyes = eyeFiles.find((e: string) => lo(e).includes('regular'))
+        t.eyes = regularEyes || 'none'
+      }
+    }
+
+    // alien type → alien eyes
+    if (t.type && t.eyes !== undefined && lo(t.type).includes('alien') && (t.eyes === 'none' || lo(t.eyes).includes('regular'))) {
+      const eyeFiles = layerOptions['eyes'] || layerOptions['eyewear'] || []
+      const alienEyes = eyeFiles.find((e: string) => lo(e).includes('alien'))
       if (alienEyes) t.eyes = alienEyes
     }
-
-    // Rule 11: type-specific trait weights for random selection
-    // (plain 30%, charcoal 30%, zombie 14%, ape 12%, alien 10%, other 4%)
-    // Already handled by pick() from available options — close enough
 
     setTraits(t)
   }
 
   const handleClear = () => {
-    setTraits(getDefaultTraits())
+    setTraits(getDefaultTraits(traitDefs))
   }
 
   const handleDownload = () => {
@@ -490,10 +373,15 @@ export default function MferCreator() {
 
   const handleSave = () => {
     if (!saveName.trim()) return
+    // Only save traits from current collection's trait defs (no stale keys)
+    const relevantTraits: Record<string, string> = {}
+    for (const def of traitDefs) {
+      relevantTraits[def.key] = traits[def.key] || 'none'
+    }
     const mfer: SavedMfer = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name: saveName.trim(),
-      traits: { ...traits },
+      traits: relevantTraits,
       collection,
       createdAt: new Date().toISOString(),
     }
@@ -516,16 +404,17 @@ export default function MferCreator() {
 
   const activeTraitCount = Object.values(traits).filter(v => v !== 'none').length
   const currentOptions = layerOptions[activeTab] || []
-  const currentTraitValue = traits[activeTab]
+  const currentTraitValue = traits[activeTab] || 'none'
 
-  // Display name: strip .png extension
-  const displayName = (filename: string) => filename.replace(/\.png$/i, '')
+  // Display name: strip .png extension and rarity weights (e.g. "cream#100" → "cream")
+  const displayName = (filename: string) =>
+    filename.replace(/\.png$/i, '').replace(/#\d+$/, '')
 
   // Thumbnail URL for a trait option
-  const thumbUrl = (key: TraitKey, filename: string) => {
-    const folder = keyToFolder[key]
-    if (!folder) return ''
-    return layerUrl(collection, folder, filename)
+  const thumbUrl = (key: string, filename: string) => {
+    const def = traitDefs.find(d => d.key === key)
+    if (!def) return ''
+    return layerUrl(collection, def.folder, filename)
   }
 
   return (
@@ -542,20 +431,42 @@ export default function MferCreator() {
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block">collection</label>
             <div className="flex flex-wrap gap-1">
-              {COLLECTIONS.map(c => (
-                <button
-                  key={c}
-                  onClick={() => setCollection(c)}
-                  className={`px-2 py-0.5 rounded-full text-[10px] transition-all border
-                    ${collection === c
-                      ? 'border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41]'
-                      : 'border-[#222] bg-[#111] text-gray-500 hover:border-[#444] hover:text-white'
-                    }`}
-                >
-                  {c}
-                </button>
-              ))}
+              {COLLECTIONS.map(c => {
+                const info = getCollectionInfo(c)
+                return (
+                  <button
+                    key={c}
+                    onClick={() => setCollection(c)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] transition-all border
+                      ${collection === c
+                        ? 'border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41]'
+                        : 'border-[#222] bg-[#111] text-gray-500 hover:border-[#444] hover:text-white'
+                      }`}
+                    title={`by ${info.creator}`}
+                  >
+                    {c}
+                  </button>
+                )
+              })}
             </div>
+          </div>
+
+          {/* Creator attribution */}
+          <div className="text-xs text-gray-500 border border-[#222] rounded px-2 py-1.5 bg-[#0a0a0a]">
+            <span className="text-gray-400">{collectionInfo.name}</span>
+            <span className="mx-1">&middot;</span>
+            {collectionInfo.creatorUrl ? (
+              <a
+                href={collectionInfo.creatorUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#00ff41]/70 hover:text-[#00ff41] transition-colors"
+              >
+                {collectionInfo.creator}
+              </a>
+            ) : (
+              <span>{collectionInfo.creator}</span>
+            )}
           </div>
 
           {/* Action buttons */}
@@ -681,16 +592,16 @@ export default function MferCreator() {
 
         {/* RIGHT — trait selectors */}
         <div className="flex-1 min-w-0 order-3">
-          {/* Category tabs — horizontally scrollable */}
+          {/* Category tabs — dynamically generated from collection's trait defs */}
           <div className="flex overflow-x-auto gap-1 pb-2 mb-3 scrollbar-thin">
-            {CATEGORIES.map(cat => {
-              const isMissing = missingCategories.has(cat.key)
-              const isActive = activeTab === cat.key
-              const hasValue = traits[cat.key] !== 'none'
+            {traitDefs.map(def => {
+              const isActive = activeTab === def.key
+              const hasValue = traits[def.key] !== 'none' && traits[def.key] !== undefined
+              const hasOptions = (layerOptions[def.key] || []).length > 0
               return (
                 <button
-                  key={cat.key}
-                  onClick={() => setActiveTab(cat.key)}
+                  key={def.key}
+                  onClick={() => setActiveTab(def.key)}
                   className={`px-2.5 py-1 rounded-full text-[11px] whitespace-nowrap transition-all border shrink-0
                     ${isActive
                       ? 'border-[#00ff41] bg-[#00ff41]/10 text-[#00ff41]'
@@ -698,10 +609,10 @@ export default function MferCreator() {
                         ? 'border-[#00ff41]/30 bg-[#111] text-[#00ff41]/70'
                         : 'border-[#222] bg-[#111] text-gray-500 hover:border-[#444] hover:text-white'
                     }
-                    ${isMissing ? 'opacity-40' : ''}
+                    ${!hasOptions ? 'opacity-40' : ''}
                   `}
                 >
-                  {isMissing && '\u26a0\ufe0f '}{cat.label}
+                  {def.label}
                 </button>
               )
             })}
@@ -709,7 +620,7 @@ export default function MferCreator() {
 
           {/* Current category label */}
           <div className="text-sm text-gray-400 mb-2">
-            {CATEGORIES.find(c => c.key === activeTab)?.label}
+            {traitDefs.find(d => d.key === activeTab)?.label}
             {currentTraitValue !== 'none' && (
               <span className="text-[#00ff41] ml-2">&middot; {displayName(currentTraitValue)}</span>
             )}
@@ -769,9 +680,9 @@ export default function MferCreator() {
             })}
           </div>
 
-          {missingCategories.has(activeTab) && (
+          {(layerOptions[activeTab] || []).length === 0 && !loading && (
             <p className="text-xs text-yellow-500 mt-2">
-              this trait category is not available in the {collection} collection
+              this trait category has no options in the {collectionInfo.name} collection
             </p>
           )}
         </div>

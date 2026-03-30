@@ -35,6 +35,7 @@ DERIVATIVE_DIR_MAP = {
     "sketchy": "sketchyMfers",
     "somfers": "somfers",
     "mfpurrs": "mfpurrs",
+    "tinydinos": "tinyDinos",
     "3d": "3d",
 }
 

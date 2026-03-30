@@ -90,7 +90,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 # Allowed derivative collections for mfer_gen
 ALLOWED_COLLECTIONS = frozenset([
     '3d', 'creyzies', 'eos', 'fineart', 'mfersahead', 'mfersbehind',
-    'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs'
+    'sketchy', 'extended', 'mpher', 'somfers', 'mfpurrs', 'tinydinos'
 ])
 
 # 3D mfer CDN
