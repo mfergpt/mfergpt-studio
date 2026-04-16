@@ -8,7 +8,7 @@ WORKSPACE = Path("/Users/mfergpt/.openclaw/workspace")
 SCRIPTS_DIR = WORKSPACE / "scripts"
 SCENE_SCRIPTS_DIR = WORKSPACE / "builds/mfer-scenes/scripts"
 WATERMARK_SCRIPT = SCRIPTS_DIR / "watermark.py"
-OUTPUT_DIR = Path("/tmp/mfergpt-studio-output")
+OUTPUT_DIR = WORKSPACE / "data" / "studio-output"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed theme names — WHITELIST only, no arbitrary input to CLI

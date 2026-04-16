@@ -39,6 +39,9 @@ def _find_output(base_path: Path) -> Path | None:
     # Also check if the script wrote to stdout with "Done: /path"
     return None
 
+def _ensure_output_dir():
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
 def _media_type(path: Path) -> str:
     ext = path.suffix.lower()
     return {
@@ -54,6 +57,7 @@ async def render(req: RenderRequest):
     """Free theme render — whitelisted themes only, no user input in shell."""
     mfer_id = validate_mfer_id(req.mferId)
     theme = validate_theme(req.theme)
+    _ensure_output_dir()
 
     job_id = uuid.uuid4().hex[:12]
     output_base = OUTPUT_DIR / f"render-{job_id}"
@@ -135,6 +139,7 @@ async def render_custom(req: CustomRenderRequest, user: dict = Depends(require_t
     """Token-gated custom theme render."""
     mfer_id = validate_mfer_id(req.mferId)
     prompt = validate_prompt(req.prompt)
+    _ensure_output_dir()
 
     job_id = uuid.uuid4().hex[:12]
     output_base = OUTPUT_DIR / f"custom-{job_id}"
