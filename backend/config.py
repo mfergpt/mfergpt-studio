@@ -9,7 +9,7 @@ SCRIPTS_DIR = WORKSPACE / "scripts"
 SCENE_SCRIPTS_DIR = WORKSPACE / "builds/mfer-scenes/scripts"
 WATERMARK_SCRIPT = SCRIPTS_DIR / "watermark.py"
 OUTPUT_DIR = Path("/tmp/mfergpt-studio-output")
-OUTPUT_DIR.mkdir(exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # Allowed theme names — WHITELIST only, no arbitrary input to CLI
 # Auto-discover custom themes from the renderers directory
